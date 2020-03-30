@@ -4,12 +4,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CalculateFilesHashCodes.Utils
 {
-    public sealed class HashSumDbContext : DbContext
+    public sealed class HashCodeDbContext : DbContext
     {
         public DbSet<FileNode> FileNodes { get; set; }
         public DbSet<ErrorNode> ErrorNodes { get; set; }
 
-        public HashSumDbContext()
+        public HashCodeDbContext()
         {
             Database.EnsureCreated();
         }

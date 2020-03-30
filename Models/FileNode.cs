@@ -3,13 +3,13 @@
     public class FileNode
     {
         //[Key]
-        public string FileName { get; set; }
+        public string FilePath { get; set; }
         //[Required]
         public string HashValue { get; set; }
 
-        public FileNode(string fileName, string hashValue)
+        public FileNode(string filePath, string hashValue)
         {
-            FileName = fileName;
+            FilePath = filePath;
             HashValue = hashValue;
         }
     }

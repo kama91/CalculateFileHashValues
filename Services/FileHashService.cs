@@ -56,25 +56,25 @@ namespace CalculateFilesHashCodes.Services
         {
             using var fileStream = File.OpenRead(filePath);
             byte[] hashValue;
-            if (!Enum.TryParse(typeof(HashSumAlgorithmEnum), typeHashSum, true, out var hashAlgorithm)) return null;
+            if (!Enum.TryParse(typeof(HashCodeAlgorithmEnum), typeHashSum, true, out var hashAlgorithm)) return null;
             switch (hashAlgorithm)
             {
-                case HashSumAlgorithmEnum.Md5:
+                case HashCodeAlgorithmEnum.Md5:
                     hashValue = MD5.Create().ComputeHash(fileStream);
                     break;
-                case HashSumAlgorithmEnum.Sha1:
+                case HashCodeAlgorithmEnum.Sha1:
                     hashValue = SHA1.Create().ComputeHash(fileStream);
                     break;
-                case HashSumAlgorithmEnum.Sha256:
+                case HashCodeAlgorithmEnum.Sha256:
                     hashValue = SHA256.Create().ComputeHash(fileStream);
                     break;
-                case HashSumAlgorithmEnum.Sha384:
+                case HashCodeAlgorithmEnum.Sha384:
                     hashValue = SHA384.Create().ComputeHash(fileStream);
                     break;
-                case HashSumAlgorithmEnum.Sha512:
+                case HashCodeAlgorithmEnum.Sha512:
                     hashValue = SHA512.Create().ComputeHash(fileStream);
                     break;
-                case HashSumAlgorithmEnum.Base64:
+                case HashCodeAlgorithmEnum.Base64:
                     var binaryData = new byte[fileStream.Length];
                     long bytesRead = fileStream.Read(binaryData, 0, (int) fileStream.Length);
 

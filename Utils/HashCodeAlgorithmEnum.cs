@@ -1,6 +1,6 @@
 ﻿namespace CalculateFilesHashCodes.Utils
 {
-    public enum HashSumAlgorithmEnum
+    public enum HashCodeAlgorithmEnum
     {
         Md5,
         Sha1,

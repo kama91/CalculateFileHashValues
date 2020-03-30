@@ -11,7 +11,7 @@ namespace CalculateFilesHashCodes.Services
     public class DbService : IDataService<object>
     {
         private readonly IDataService<FileNode> _fileHashService;
-        private readonly HashSumDbContext _hashSumDbContext;
+        private readonly HashCodeDbContext _hashSumDbContext;
         private readonly IDbOperation _dbOperation;
 
         public StatusService Status { get; set; }
@@ -20,7 +20,7 @@ namespace CalculateFilesHashCodes.Services
         public DbService(IDataService<FileNode> fileHashService, DbContext hashSumDbContext)
         {
             _fileHashService = fileHashService;
-            _hashSumDbContext = hashSumDbContext as HashSumDbContext;
+            _hashSumDbContext = hashSumDbContext as HashCodeDbContext;
         }
 
         public DbService(IDataService<FileNode> fileHashService, IDbOperation dbOperation)
@@ -75,7 +75,7 @@ namespace CalculateFilesHashCodes.Services
                     [HashValue] text NOT NULL);");
             while (_fileHashService.DataQueue.TryDequeue(out var item))
             {
-                _dbOperation.ExecuteCommand($"INSERT INTO FileNodes (FileName, HashValue) VALUES ('{item.FileName}', '{item.HashValue}')");
+                _dbOperation.ExecuteCommand($"INSERT INTO FileNodes (FileName, HashValue) VALUES ('{item.FilePath}', '{item.HashValue}')");
                 //_hashSumDbContext.FileNodes.Add(item);
                 //_hashSumDbContext.SaveChanges(); it's slooooooow...
             }
