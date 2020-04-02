@@ -39,7 +39,7 @@ namespace CalculateFilesHashCodes.Services
             }
             catch (Exception ex)
             {
-                ErrorService.GetCurrentErrorService().DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                ErrorService.CurrentErrorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
                 Console.WriteLine(ex.Message);
             }
 
@@ -62,7 +62,7 @@ namespace CalculateFilesHashCodes.Services
             }
             catch (Exception ex)
             {
-                ErrorService.GetCurrentErrorService().DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                ErrorService.CurrentErrorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
                 Console.WriteLine(ex.Message);
             }
         }
@@ -89,7 +89,7 @@ namespace CalculateFilesHashCodes.Services
             }
             catch (Exception ex)
             {
-                ErrorService.GetCurrentErrorService().DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                ErrorService.CurrentErrorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
                 Console.WriteLine(ex.Message);
             }
         }
@@ -99,7 +99,7 @@ namespace CalculateFilesHashCodes.Services
             _dbOperation.ExecuteCommand(@"CREATE TABLE IF NOT EXISTS [ErrorNodes] (
                     [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                     [Info] text NOT NULL);");
-            while (ErrorService.GetCurrentErrorService().DataQueue.TryDequeue(out var errorNode))
+            while (ErrorService.CurrentErrorService.DataQueue.TryDequeue(out var errorNode))
             {
                 _dbOperation.ExecuteCommand($"INSERT INTO ErrorNodes (Info) VALUES ('{errorNode.Info.Replace("'", string.Empty)}')");
                 //_hashSumDbContext.ErrorNodes.Add(errorNode);

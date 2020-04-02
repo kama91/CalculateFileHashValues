@@ -46,7 +46,7 @@ namespace CalculateFilesHashCodes.Services
                 }
                 catch (Exception ex)
                 {
-                    ErrorService.GetCurrentErrorService().DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                    ErrorService.CurrentErrorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
                     Console.WriteLine($"Error: {ex.Message}");
                 }
             }

@@ -5,19 +5,30 @@ using CalculateFilesHashCodes.Utils;
 
 namespace CalculateFilesHashCodes.Services
 {
-    public class ErrorService : IDataService<ErrorNode>
+    public sealed class ErrorService : IDataService<ErrorNode>
     {
         private static ErrorService _instance;
         private static readonly object Lock = new object();
 
+        private ErrorService()
+        {
+
+        }
+
         public StatusService Status { get; set; }
         public ConcurrentQueue<ErrorNode> DataQueue { get; } = new ConcurrentQueue<ErrorNode>();
 
-        public static ErrorService GetCurrentErrorService()
+        public static ErrorService CurrentErrorService
         {
-            lock (Lock)
+            get
             {
-                return _instance ??= new ErrorService();
+                if (_instance != null) return _instance;
+                lock (Lock)
+                {
+                    _instance ??= new ErrorService();
+                }
+
+                return _instance;
             }
         }
     }
