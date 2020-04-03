@@ -22,7 +22,7 @@ namespace CalculateFilesHashCodes
                 var fileHashService = new FileHashService(fileScannerService);
                 fileHashService.StartCalculate();
                 //var dbService = new DbService(fileHashService, new HashSumDbContext());
-                var dbService = new DbService(fileHashService, new SqLiteOperation());
+                var dbService = new DbService(fileHashService, new SqLiteDbOperation());
                 dbService.StartWriteToDb();
                 Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
                 Console.WriteLine("Process finished");

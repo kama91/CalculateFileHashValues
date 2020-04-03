@@ -12,7 +12,7 @@ namespace CalculateFilesHashCodes.Services
     {
         private readonly IDataService<FileNode> _fileHashService;
         private readonly HashCodeDbContext _hashSumDbContext;
-        private readonly IDbOperation _dbOperation;
+        private readonly SqLiteDbOperation _dbOperation;
 
         public StatusService Status { get; set; }
         public ConcurrentQueue<object> DataQueue { get; }
@@ -23,7 +23,7 @@ namespace CalculateFilesHashCodes.Services
             _hashSumDbContext = hashSumDbContext as HashCodeDbContext;
         }
 
-        public DbService(IDataService<FileNode> fileHashService, IDbOperation dbOperation)
+        public DbService(IDataService<FileNode> fileHashService, SqLiteDbOperation dbOperation)
         {
             _fileHashService = fileHashService;
             _dbOperation = dbOperation;

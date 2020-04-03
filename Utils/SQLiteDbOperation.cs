@@ -2,11 +2,10 @@
 using System.Data;
 using System.Data.SQLite;
 using System.IO;
-using CalculateFilesHashCodes.Interfaces;
 
 namespace CalculateFilesHashCodes.Utils
 {
-    public class SqLiteOperation : IDbOperation
+    public class SqLiteDbOperation
     {
         private SQLiteConnection _connection;
 
