@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using CalculateFilesHashCodes.Common;
 using CalculateFilesHashCodes.Services;
-using CalculateFilesHashCodes.Utils;
 
 namespace CalculateFilesHashCodes
 {

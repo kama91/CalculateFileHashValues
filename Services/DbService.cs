@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using CalculateFilesHashCodes.Common;
 using CalculateFilesHashCodes.Interfaces;
 using CalculateFilesHashCodes.Models;
-using CalculateFilesHashCodes.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace CalculateFilesHashCodes.Services

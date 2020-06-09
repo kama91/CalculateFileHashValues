@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using CalculateFilesHashCodes.Utils;
+using CalculateFilesHashCodes.Common;
 
 namespace CalculateFilesHashCodes.Interfaces
 {

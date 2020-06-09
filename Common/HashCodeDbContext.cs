@@ -2,7 +2,7 @@
 using CalculateFilesHashCodes.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CalculateFilesHashCodes.Utils
+namespace CalculateFilesHashCodes.Common
 {
     public sealed class HashCodeDbContext : DbContext
     {

@@ -3,7 +3,7 @@ using System.Data;
 using System.Data.SQLite;
 using System.IO;
 
-namespace CalculateFilesHashCodes.Utils
+namespace CalculateFilesHashCodes.Common
 {
     public class SqLiteDbOperation
     {

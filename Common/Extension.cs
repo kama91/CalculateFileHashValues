@@ -2,9 +2,9 @@
 using System.Threading;
 using CalculateFilesHashCodes.Interfaces;
 
-namespace CalculateFilesHashCodes.Utils
+namespace CalculateFilesHashCodes.Common
 {
-    public static class CommonHelper
+    public static class Extension
     {
         public static void HandlingData<T>(this IDataService<T> service, Action action)
         {

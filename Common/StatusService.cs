@@ -1,5 +1,5 @@
 ﻿
-namespace CalculateFilesHashCodes.Utils
+namespace CalculateFilesHashCodes.Common
 {
     public enum StatusService
     {
