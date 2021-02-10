@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using CalculateFilesHashCodes.Common;
+using CalculateFilesHashCodes.DAL;
+using CalculateFilesHashCodes.HashCodeAlgorithm;
 using CalculateFilesHashCodes.Services;
 
 namespace CalculateFilesHashCodes
@@ -19,10 +21,10 @@ namespace CalculateFilesHashCodes
                 Console.WriteLine("Please, standby........");
                 var fileScannerService = new FileScannerService();
                 fileScannerService.StartScanDirectory(directories?.Replace(@"\", @"\\"));
-                var fileHashService = new FileHashService(fileScannerService);
+                var fileHashService = new FileHashService(fileScannerService, new Md5HashCodeAlgorithm());
                 fileHashService.StartCalculate();
                 //var dbService = new DbService(fileHashService, new HashSumDbContext());
-                var dbService = new DbService(fileHashService, new SqLiteDbOperation());
+                var dbService = new DbService(fileHashService, new SqLiteDbContext());
                 dbService.StartWriteToDb();
                 Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
                 Console.WriteLine("Process finished");

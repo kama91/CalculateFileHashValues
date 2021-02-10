@@ -2,31 +2,27 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using CalculateFilesHashCodes.Common;
+using CalculateFilesHashCodes.DAL.Interfaces;
 using CalculateFilesHashCodes.Interfaces;
 using CalculateFilesHashCodes.Models;
-using Microsoft.EntityFrameworkCore;
+using CalculateFilesHashCodes.Services;
 
-namespace CalculateFilesHashCodes.Services
+namespace CalculateFilesHashCodes.DAL
 {
     public class DbService : IDataService<object>
     {
         private readonly IDataService<FileNode> _fileHashService;
-        private readonly HashCodeDbContext _hashSumDbContext;
-        private readonly SqLiteDbOperation _dbOperation;
+        private readonly IDbContext _dbContext;
 
         public StatusService Status { get; set; }
         public ConcurrentQueue<object> DataQueue { get; }
        
-        public DbService(IDataService<FileNode> fileHashService, DbContext hashSumDbContext)
+        public DbService(
+            IDataService<FileNode> fileHashService,
+            IDbContext dbContext)
         {
             _fileHashService = fileHashService;
-            _hashSumDbContext = hashSumDbContext as HashCodeDbContext;
-        }
-
-        public DbService(IDataService<FileNode> fileHashService, SqLiteDbOperation dbOperation)
-        {
-            _fileHashService = fileHashService;
-            _dbOperation = dbOperation;
+            _dbContext = dbContext;
         }
 
         public void StartWriteToDb()
@@ -34,8 +30,8 @@ namespace CalculateFilesHashCodes.Services
             Status = StatusService.Running;
             try
             {
-                _dbOperation.CreateConnectionDb("HashDb.db");
-                _dbOperation.OpenConnection();
+                _dbContext.CreateConnectionDb("HashDb.db");
+                _dbContext.OpenConnection();
             }
             catch (Exception ex)
             {
@@ -50,7 +46,7 @@ namespace CalculateFilesHashCodes.Services
             });
 
             Status = StatusService.Complete;
-            _dbOperation.ClearConnection();
+            _dbContext.ClearConnection();
             Console.WriteLine("DbService has finished work");
         }
 
@@ -69,15 +65,13 @@ namespace CalculateFilesHashCodes.Services
 
         private void MakeWriteData()
         {
-            _dbOperation.ExecuteCommand(@"CREATE TABLE IF NOT EXISTS [FileNodes] (
+            _dbContext.ExecuteQuery(@"CREATE TABLE IF NOT EXISTS [FileNodes] (
                     [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,    
                     [FileName] text NOT NULL,
                     [HashValue] text NOT NULL);");
             while (_fileHashService.DataQueue.TryDequeue(out var item))
             {
-                _dbOperation.ExecuteCommand($"INSERT INTO FileNodes (FileName, HashValue) VALUES ('{item.FilePath}', '{item.HashValue}')");
-                //_hashSumDbContext.FileNodes.Add(item);
-                //_hashSumDbContext.SaveChanges(); it's slooooooow...
+                _dbContext.ExecuteQuery($"INSERT INTO FileNodes (FileName, HashValue) VALUES ('{item.FilePath}', '{item.HashValue}')");
             }
         }
 
@@ -96,14 +90,12 @@ namespace CalculateFilesHashCodes.Services
 
         private void MakeWriteError()
         {
-            _dbOperation.ExecuteCommand(@"CREATE TABLE IF NOT EXISTS [ErrorNodes] (
+            _dbContext.ExecuteQuery(@"CREATE TABLE IF NOT EXISTS [ErrorNodes] (
                     [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                     [Info] text NOT NULL);");
             while (ErrorService.CurrentErrorService.DataQueue.TryDequeue(out var errorNode))
             {
-                _dbOperation.ExecuteCommand($"INSERT INTO ErrorNodes (Info) VALUES ('{errorNode.Info.Replace("'", string.Empty)}')");
-                //_hashSumDbContext.ErrorNodes.Add(errorNode);
-                //_hashSumDbContext.SaveChanges();
+                _dbContext.ExecuteQuery($"INSERT INTO ErrorNodes (Info) VALUES ('{errorNode.Info.Replace("'", string.Empty)}')");
             }
         }
     }

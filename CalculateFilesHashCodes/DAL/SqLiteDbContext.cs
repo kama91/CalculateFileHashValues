@@ -2,10 +2,11 @@
 using System.Data;
 using System.Data.SQLite;
 using System.IO;
+using CalculateFilesHashCodes.DAL.Interfaces;
 
-namespace CalculateFilesHashCodes.Common
+namespace CalculateFilesHashCodes.DAL
 {
-    public class SqLiteDbOperation
+    public class SqLiteDbContext : IDbContext
     {
         private SQLiteConnection _connection;
 
@@ -30,7 +31,7 @@ namespace CalculateFilesHashCodes.Common
             _connection?.Dispose();
         }
 
-        public void ExecuteCommand(string textCommand)
+        public void ExecuteQuery(string textCommand)
         {
             if (_connection == null) return;
             var command = _connection.CreateCommand();
