@@ -1,7 +1,7 @@
 ﻿
 namespace CalculateFilesHashCodes.Services
 {
-    public enum StatusService
+    public enum ServiceStatus
     {
         Stopped,
         Running,

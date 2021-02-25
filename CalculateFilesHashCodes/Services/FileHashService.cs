@@ -12,17 +12,21 @@ namespace CalculateFilesHashCodes.Services
     public class FileHashService : IDataService<FileNode>
     {
         private readonly IDataService<string> _fileScannerService;
+        private readonly IDataService<ErrorNode> _errorService;
         private readonly IHashCodeAlgorithm _hashCodeAlgorithm;
 
-        public StatusService Status { get; set; }
-        public ConcurrentQueue<FileNode> DataQueue { get; } = new ConcurrentQueue<FileNode>();
+        public ServiceStatus Status { get; set; }
+        public ConcurrentQueue<FileNode> DataQueue { get; } = new();
         
         public FileHashService(
             IDataService<string> fileScannerService,
-            IHashCodeAlgorithm hashCodeAlgorithm)
+            IDataService<ErrorNode> errorService,
+            IHashCodeAlgorithm hashCodeAlgorithm
+            )
         {
             _fileScannerService = fileScannerService ?? throw new ArgumentNullException(nameof(fileScannerService));
             _hashCodeAlgorithm = hashCodeAlgorithm ?? throw new ArgumentNullException(nameof(hashCodeAlgorithm));
+            _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
         public Task StartCalculate()
@@ -32,11 +36,11 @@ namespace CalculateFilesHashCodes.Services
 
         public void CalculateHashCodeAndAddToQueue()
         {
-            Status = StatusService.Running;
+            Status = ServiceStatus.Running;
 
             _fileScannerService.HandlingData(AddHashToQueue);
 
-            Status = StatusService.Complete;
+            Status = ServiceStatus.Complete;
             Console.WriteLine("FileHashService has finished work");
         }
 
@@ -50,7 +54,7 @@ namespace CalculateFilesHashCodes.Services
                 }
                 catch (Exception ex)
                 {
-                    ErrorService.CurrentErrorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                    _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
                     Console.WriteLine($"Error: {ex.Message}");
                 }
             }

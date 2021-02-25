@@ -9,7 +9,7 @@ namespace CalculateFilesHashCodes.Interfaces
         /// <summary>
         /// Service operation status
         /// </summary>
-        StatusService Status { get; set; }
+        ServiceStatus Status { get; set; }
 
         /// <summary>
         /// The collection of data that service fills

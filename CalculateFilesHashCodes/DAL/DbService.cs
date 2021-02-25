@@ -12,22 +12,25 @@ namespace CalculateFilesHashCodes.DAL
     public class DbService : IDataService<object>
     {
         private readonly IDataService<FileNode> _fileHashService;
+        private readonly IDataService<ErrorNode> _errorService;
         private readonly IDbContext _dbContext;
 
-        public StatusService Status { get; set; }
+        public ServiceStatus Status { get; set; }
         public ConcurrentQueue<object> DataQueue { get; }
        
         public DbService(
             IDataService<FileNode> fileHashService,
+            IDataService<ErrorNode> errorService,
             IDbContext dbContext)
         {
-            _fileHashService = fileHashService;
-            _dbContext = dbContext;
+            _fileHashService = fileHashService ?? throw new ArgumentNullException(nameof(fileHashService));
+            _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
+            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
         public void StartWriteToDb()
         {
-            Status = StatusService.Running;
+            Status = ServiceStatus.Running;
             try
             {
                 _dbContext.CreateConnectionDb("HashDb.db");
@@ -35,7 +38,7 @@ namespace CalculateFilesHashCodes.DAL
             }
             catch (Exception ex)
             {
-                ErrorService.CurrentErrorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
                 Console.WriteLine(ex.Message);
             }
 
@@ -45,7 +48,7 @@ namespace CalculateFilesHashCodes.DAL
                 WriteErrorToDb();
             });
 
-            Status = StatusService.Complete;
+            Status = ServiceStatus.Complete;
             _dbContext.ClearConnection();
             Console.WriteLine("DbService has finished work");
         }
@@ -58,7 +61,7 @@ namespace CalculateFilesHashCodes.DAL
             }
             catch (Exception ex)
             {
-                ErrorService.CurrentErrorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
                 Console.WriteLine(ex.Message);
             }
         }
@@ -83,7 +86,7 @@ namespace CalculateFilesHashCodes.DAL
             }
             catch (Exception ex)
             {
-                ErrorService.CurrentErrorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
                 Console.WriteLine(ex.Message);
             }
         }
@@ -93,7 +96,7 @@ namespace CalculateFilesHashCodes.DAL
             _dbContext.ExecuteQuery(@"CREATE TABLE IF NOT EXISTS [ErrorNodes] (
                     [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                     [Info] text NOT NULL);");
-            while (ErrorService.CurrentErrorService.DataQueue.TryDequeue(out var errorNode))
+            while (_errorService.DataQueue.TryDequeue(out var errorNode))
             {
                 _dbContext.ExecuteQuery($"INSERT INTO ErrorNodes (Info) VALUES ('{errorNode.Info.Replace("'", string.Empty)}')");
             }

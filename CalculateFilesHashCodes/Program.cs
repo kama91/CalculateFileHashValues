@@ -19,12 +19,12 @@ namespace CalculateFilesHashCodes
                 var directories = Console.ReadLine();
                 var timer = Stopwatch.StartNew();
                 Console.WriteLine("Please, standby........");
-                var fileScannerService = new FileScannerService();
+                var errorService = new ErrorService();
+                var fileScannerService = new FileScannerService(errorService);
                 fileScannerService.StartScanDirectory(directories?.Replace(@"\", @"\\"));
-                var fileHashService = new FileHashService(fileScannerService, new Md5HashCodeAlgorithm());
+                var fileHashService = new FileHashService(fileScannerService, errorService, new Md5HashCodeAlgorithm());
                 fileHashService.StartCalculate();
-                //var dbService = new DbService(fileHashService, new HashSumDbContext());
-                var dbService = new DbService(fileHashService, new SqLiteDbContext());
+                var dbService = new DbService(fileHashService, errorService, new SqLiteDbContext());
                 dbService.StartWriteToDb();
                 Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
                 Console.WriteLine("Process finished");
