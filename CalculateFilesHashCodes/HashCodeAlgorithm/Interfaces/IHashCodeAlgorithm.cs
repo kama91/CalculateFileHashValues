@@ -4,6 +4,6 @@ namespace CalculateFilesHashCodes.HashCodeAlgorithm.Interfaces
 {
     public interface IHashCodeAlgorithm
     {
-        byte[] ComputeHash(FileStream stream);
+        byte[] ComputeHash(Stream stream);
     }
 }

@@ -13,7 +13,7 @@ namespace CalculateFilesHashCodes.Common
             {
                 if (service.DataQueue.IsEmpty)
                 {
-                    Thread.Sleep(300);
+                    Thread.Sleep(200);
                 }
                 else
                 {
