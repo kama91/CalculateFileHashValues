@@ -5,7 +5,7 @@ using CalculateFilesHashCodes.Services;
 
 namespace CalculateFilesHashCodes.Common
 {
-    public static class Extension
+    public static class Extensions
     {
         public static void HandlingData<T>(this IDataService<T> service, Action action)
         {
@@ -13,7 +13,7 @@ namespace CalculateFilesHashCodes.Common
             {
                 if (service.DataQueue.IsEmpty)
                 {
-                    Thread.Sleep(200);
+                    Thread.Sleep(300);
                 }
                 else
                 {

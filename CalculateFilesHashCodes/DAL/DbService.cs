@@ -42,11 +42,7 @@ namespace CalculateFilesHashCodes.DAL
                 Console.WriteLine(ex.Message);
             }
 
-            Parallel.Invoke(() =>
-            {
-                WriteDataToDb();
-                WriteErrorToDb();
-            });
+            Parallel.Invoke(WriteDataToDb, WriteErrorToDb);
 
             Status = ServiceStatus.Complete;
             _dbContext.ClearConnection();
@@ -72,6 +68,7 @@ namespace CalculateFilesHashCodes.DAL
                     [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,    
                     [FileName] text NOT NULL,
                     [HashValue] text NOT NULL);");
+            
             while (_fileHashService.DataQueue.TryDequeue(out var item))
             {
                 _dbContext.ExecuteQuery($"INSERT INTO FileNodes (FileName, HashValue) VALUES ('{item.FilePath}', '{item.HashValue}')");
