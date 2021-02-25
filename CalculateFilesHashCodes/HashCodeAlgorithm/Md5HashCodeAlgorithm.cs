@@ -6,7 +6,7 @@ namespace CalculateFilesHashCodes.HashCodeAlgorithm
 {
     public class Md5HashCodeAlgorithm : IHashCodeAlgorithm
     {
-        public byte[] ComputeHash(FileStream stream)
+        public byte[] ComputeHash(Stream stream)
         {
             return MD5.Create().ComputeHash(stream);
         }
