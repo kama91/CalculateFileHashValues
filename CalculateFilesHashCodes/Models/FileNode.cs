@@ -2,10 +2,9 @@
 {
     public class FileNode
     {
-        //[Key]
-        public string FilePath { get; set; }
-        //[Required]
-        public string HashValue { get; set; }
+        public string FilePath { get; }
+        
+        public string HashValue { get; }
 
         public FileNode(string filePath, string hashValue)
         {
