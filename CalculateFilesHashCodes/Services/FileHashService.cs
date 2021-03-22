@@ -62,9 +62,7 @@ namespace CalculateFilesHashCodes.Services
 
         private byte[] GetHashCode(string filePath)
         {
-            using var fileStream = File.OpenRead(filePath);
-            
-            return _hashCodeAlgorithm.ComputeHash(fileStream);
+            return _hashCodeAlgorithm.ComputeHash(filePath);
         }
     }
 }
