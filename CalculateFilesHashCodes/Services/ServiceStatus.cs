@@ -5,6 +5,6 @@ namespace CalculateFilesHashCodes.Services
     {
         Stopped,
         Running,
-        Complete
+        Completed
     }
 }

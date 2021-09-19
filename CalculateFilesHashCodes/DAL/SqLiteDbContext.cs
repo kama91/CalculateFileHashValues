@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Data;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using System.IO;
 using CalculateFilesHashCodes.DAL.Interfaces;
 
@@ -8,17 +8,17 @@ namespace CalculateFilesHashCodes.DAL
 {
     public class SqLiteDbContext : IDbContext
     {
-        private SQLiteConnection _connection;
+        private SqliteConnection _connection;
 
         public void CreateConnectionDb(string dbName)
         {
             var path = Environment.CurrentDirectory + $@"\{dbName}";
             if (!File.Exists(path))
             {
-                SQLiteConnection.CreateFile(path);
+                File.Create(path);
             }
 
-            _connection = new SQLiteConnection($"Data Source={dbName};Version=3");
+            _connection = new SqliteConnection($"Data Source={dbName}");
         }
 
         public void OpenConnection()

@@ -40,7 +40,7 @@ namespace CalculateFilesHashCodes.Services
 
             _fileScannerService.HandlingData(AddHashToQueue);
 
-            Status = ServiceStatus.Complete;
+            Status = ServiceStatus.Completed;
             Console.WriteLine("FileHashService has finished work");
         }
 

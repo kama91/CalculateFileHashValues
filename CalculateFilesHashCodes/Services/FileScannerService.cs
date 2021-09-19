@@ -46,7 +46,7 @@ namespace CalculateFilesHashCodes.Services
                         Console.WriteLine($"{path} is not a valid file or directory.");
                     }
                 }
-                Status = ServiceStatus.Complete;
+                Status = ServiceStatus.Completed;
                 Console.WriteLine("FileScannerService has finished work");
             }
             catch (Exception ex)

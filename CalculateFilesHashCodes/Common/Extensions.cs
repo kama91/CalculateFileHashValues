@@ -9,7 +9,7 @@ namespace CalculateFilesHashCodes.Common
     {
         public static void HandlingData<T>(this IDataService<T> service, Action action)
         {
-            while (service.Status != ServiceStatus.Complete)
+            while (service.Status != ServiceStatus.Completed)
             {
                 if (service.DataQueue.IsEmpty)
                 {

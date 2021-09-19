@@ -44,7 +44,7 @@ namespace CalculateFilesHashCodes.DAL
 
             Parallel.Invoke(WriteDataToDb, WriteErrorToDb);
 
-            Status = ServiceStatus.Complete;
+            Status = ServiceStatus.Completed;
             _dbContext.ClearConnection();
             Console.WriteLine("DbService has finished work");
         }
