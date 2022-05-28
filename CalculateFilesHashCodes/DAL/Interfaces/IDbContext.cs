@@ -5,6 +5,6 @@
         void CreateConnectionDb(string dbName);
         void OpenConnection();
         void ClearConnection();
-        void ExecuteQuery(string query);
+        void ExecuteCommand(string command);
     }
 }

@@ -31,7 +31,7 @@ namespace CalculateFilesHashCodes.DAL
             _connection?.Dispose();
         }
 
-        public void ExecuteQuery(string textCommand)
+        public void ExecuteCommand(string textCommand)
         {
             if (_connection == null) return;
             var command = _connection.CreateCommand();

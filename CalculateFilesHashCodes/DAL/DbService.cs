@@ -64,14 +64,14 @@ namespace CalculateFilesHashCodes.DAL
 
         private void MakeWriteData()
         {
-            _dbContext.ExecuteQuery(@"CREATE TABLE IF NOT EXISTS [FileNodes] (
+            _dbContext.ExecuteCommand(@"CREATE TABLE IF NOT EXISTS [FileNodes] (
                     [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,    
                     [FileName] text NOT NULL,
                     [HashValue] text NOT NULL);");
             
             while (_fileHashService.DataQueue.TryDequeue(out var item))
             {
-                _dbContext.ExecuteQuery($"INSERT INTO FileNodes (FileName, HashValue) VALUES ('{item.FilePath}', '{item.HashValue}')");
+                _dbContext.ExecuteCommand($"INSERT INTO FileNodes (FileName, HashValue) VALUES ('{item.FilePath}', '{item.HashValue}')");
             }
         }
 
@@ -90,12 +90,12 @@ namespace CalculateFilesHashCodes.DAL
 
         private void MakeWriteError()
         {
-            _dbContext.ExecuteQuery(@"CREATE TABLE IF NOT EXISTS [ErrorNodes] (
+            _dbContext.ExecuteCommand(@"CREATE TABLE IF NOT EXISTS [ErrorNodes] (
                     [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                     [Info] text NOT NULL);");
             while (_errorService.DataQueue.TryDequeue(out var errorNode))
             {
-                _dbContext.ExecuteQuery($"INSERT INTO ErrorNodes (Info) VALUES ('{errorNode.Info.Replace("'", string.Empty)}')");
+                _dbContext.ExecuteCommand($"INSERT INTO ErrorNodes (Info) VALUES ('{errorNode.Info.Replace("'", string.Empty)}')");
             }
         }
     }
