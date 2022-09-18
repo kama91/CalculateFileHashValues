@@ -1,26 +1,26 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Threading.Tasks;
+
 using CalculateFilesHashCodes.Common;
 using CalculateFilesHashCodes.HashCodeAlgorithm.Interfaces;
-using CalculateFilesHashCodes.Interfaces;
 using CalculateFilesHashCodes.Models;
+using CalculateFilesHashCodes.Services.Interfaces;
 
 namespace CalculateFilesHashCodes.Services
 {
-    public class FileHashService : IDataService<FileNode>
+    public class FileHashService : IDataService<FileHashItem>
     {
         private readonly IDataService<string> _fileScannerService;
-        private readonly IDataService<ErrorNode> _errorService;
+        private readonly IDataService<string> _errorService;
         private readonly IHashCodeAlgorithm _hashCodeAlgorithm;
 
         public ServiceStatus Status { get; set; }
-        public ConcurrentQueue<FileNode> DataQueue { get; } = new();
+        public ConcurrentQueue<FileHashItem> DataQueue { get; } = new();
         
         public FileHashService(
             IDataService<string> fileScannerService,
-            IDataService<ErrorNode> errorService,
+            IDataService<string> errorService,
             IHashCodeAlgorithm hashCodeAlgorithm
             )
         {
@@ -29,16 +29,11 @@ namespace CalculateFilesHashCodes.Services
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
-        public Task StartCalculate()
-        {
-            return Task.Run(CalculateHashCodeAndAddToQueue);
-        }
-
-        public void CalculateHashCodeAndAddToQueue()
+        public async Task StartCalculate()
         {
             Status = ServiceStatus.Running;
 
-            _fileScannerService.HandlingData(AddHashToQueue);
+            await _fileScannerService.HandlingData(AddHashToQueue);
 
             Status = ServiceStatus.Completed;
             Console.WriteLine("FileHashService has finished work");
@@ -50,12 +45,12 @@ namespace CalculateFilesHashCodes.Services
             {
                 try
                 {
-                    DataQueue.Enqueue(new FileNode(filePath, BitConverter.ToString(GetHashCode(filePath))));
+                    DataQueue.Enqueue(new FileHashItem(filePath, BitConverter.ToString(GetHashCode(filePath))));
                 }
                 catch (Exception ex)
                 {
-                    _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
-                    Console.WriteLine($"Error: {ex.Message}");
+                    _errorService.DataQueue.Enqueue(ex.Message);
+                    Console.Error.WriteLine($"Error: {ex.Message}");
                 }
             }
         }

@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
-    <AssemblyName>CalculateFilesHashCodes</AssemblyName>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>CalculatseFilesHashCodes</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

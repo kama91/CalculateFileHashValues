@@ -1,8 +1,6 @@
 ﻿using System.Collections.Concurrent;
-using CalculateFilesHashCodes.Common;
-using CalculateFilesHashCodes.Services;
 
-namespace CalculateFilesHashCodes.Interfaces
+namespace CalculateFilesHashCodes.Services.Interfaces
 {
     public interface IDataService<T>
     {

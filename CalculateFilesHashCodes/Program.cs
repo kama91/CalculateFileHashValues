@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
+
 using CalculateFilesHashCodes.Common;
 using CalculateFilesHashCodes.DAL;
 using CalculateFilesHashCodes.HashCodeAlgorithm;
@@ -11,7 +13,7 @@ namespace CalculateFilesHashCodes
     {
         private static bool _stopProcess;
 
-        private static void Main()
+        private static async Task Main()
         {
             while (!_stopProcess)
             {
@@ -21,11 +23,12 @@ namespace CalculateFilesHashCodes
                 Console.WriteLine("Please, standby........");
                 var errorService = new ErrorService();
                 var fileScannerService = new FileScannerService(errorService);
-                fileScannerService.StartScanDirectory(directories?.Replace(@"\", @"\\"));
-                var fileHashService = new FileHashService(fileScannerService, errorService, new Md5HashCodeAlgorithm());
-                fileHashService.StartCalculate();
-                var dbService = new DbService(fileHashService, errorService, new SqLiteDbContext());
-                dbService.StartWriteToDb();
+                var fileHashService = new FileHashService(fileScannerService, errorService, new Sha256HashCodeAlgorithm());
+                var dbService = new DbService(fileHashService, errorService);
+                await Task.WhenAll(
+                    fileScannerService.StartScanDirectory(directories?.Replace(@"\", @"\\")),
+                    fileHashService.StartCalculate(),
+                    dbService.StartToWriteDataToDb());
                 Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
                 Console.WriteLine("Process finished");
                 Console.WriteLine("Close window? 0 - close, 1 - enter new paths");

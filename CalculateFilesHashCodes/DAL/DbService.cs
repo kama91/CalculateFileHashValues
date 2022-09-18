@@ -1,102 +1,121 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Data;
 using System.Threading.Tasks;
+
 using CalculateFilesHashCodes.Common;
-using CalculateFilesHashCodes.DAL.Interfaces;
-using CalculateFilesHashCodes.Interfaces;
 using CalculateFilesHashCodes.Models;
 using CalculateFilesHashCodes.Services;
+using CalculateFilesHashCodes.Services.Interfaces;
+
+using Microsoft.Data.Sqlite;
 
 namespace CalculateFilesHashCodes.DAL
 {
     public class DbService : IDataService<object>
     {
-        private readonly IDataService<FileNode> _fileHashService;
-        private readonly IDataService<ErrorNode> _errorService;
-        private readonly IDbContext _dbContext;
+        private readonly IDataService<FileHashItem> _fileHashService;
+        private readonly IDataService<string> _errorService;
+        private SqliteConnection _connectionForHashes;
+        private SqliteConnection _connectionForErrors;
 
         public ServiceStatus Status { get; set; }
         public ConcurrentQueue<object> DataQueue { get; }
        
         public DbService(
-            IDataService<FileNode> fileHashService,
-            IDataService<ErrorNode> errorService,
-            IDbContext dbContext)
+            IDataService<FileHashItem> fileHashService,
+            IDataService<string> errorService)
         {
             _fileHashService = fileHashService ?? throw new ArgumentNullException(nameof(fileHashService));
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
-            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
-        public void StartWriteToDb()
+        public async Task StartToWriteDataToDb()
         {
             Status = ServiceStatus.Running;
             try
             {
-                _dbContext.CreateConnectionDb("HashDb.db");
-                _dbContext.OpenConnection();
+                await CreateAndOpenConnectionDb();
             }
             catch (Exception ex)
             {
-                _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                _errorService.DataQueue.Enqueue(ex.Message);
                 Console.WriteLine(ex.Message);
+                _connectionForHashes.Dispose();
+                throw;
             }
 
-            Parallel.Invoke(WriteDataToDb, WriteErrorToDb);
+            await Task.WhenAll(WriteDataToDb(), WriteErrorToDb());
 
             Status = ServiceStatus.Completed;
-            _dbContext.ClearConnection();
+            _connectionForHashes.Dispose();
             Console.WriteLine("DbService has finished work");
         }
 
-        public void WriteDataToDb()
+        private async Task WriteDataToDb()
         {
-            try
-            {
-               _fileHashService.HandlingData(MakeWriteData);
-            }
-            catch (Exception ex)
-            {
-                _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
-                Console.WriteLine(ex.Message);
-            }
+            using var cmd = _connectionForHashes.CreateCommand();
+            ExecuteCommand(cmd, @"CREATE TABLE IF NOT EXISTS [Hashes] (    
+                    [Path] text NOT NULL,
+                    [HashValue] text NOT NULL);");
+
+            await _fileHashService.HandlingData(MakeWriteData);
         }
 
         private void MakeWriteData()
         {
-            _dbContext.ExecuteCommand(@"CREATE TABLE IF NOT EXISTS [FileNodes] (
-                    [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,    
-                    [FileName] text NOT NULL,
-                    [HashValue] text NOT NULL);");
-            
+            using var transaction = _connectionForHashes.BeginTransaction();
+
             while (_fileHashService.DataQueue.TryDequeue(out var item))
             {
-                _dbContext.ExecuteCommand($"INSERT INTO FileNodes (FileName, HashValue) VALUES ('{item.FilePath}', '{item.HashValue}')");
+                using var cmd = CreateHashInsertCommand();
+                ExecuteCommand(cmd, $"INSERT INTO Hashes (Path, HashValue) VALUES ('{item.Path}', '{item.HashValue}')");
             }
+            
+            transaction.Commit();
         }
 
-        public void WriteErrorToDb()
+        private async Task WriteErrorToDb()
         {
-            try
-            {
-               _fileHashService.HandlingData(MakeWriteError);
-            }
-            catch (Exception ex)
-            {
-                _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
-                Console.WriteLine(ex.Message);
-            }
+            using var cmd = _connectionForHashes.CreateCommand();
+            ExecuteCommand(cmd, @"CREATE TABLE IF NOT EXISTS [Errors] (
+                    [Error] text NOT NULL);");
+
+            await _fileHashService.HandlingData(MakeWriteError);
         }
 
         private void MakeWriteError()
         {
-            _dbContext.ExecuteCommand(@"CREATE TABLE IF NOT EXISTS [ErrorNodes] (
-                    [Id] integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    [Info] text NOT NULL);");
-            while (_errorService.DataQueue.TryDequeue(out var errorNode))
+            using var transaction = _connectionForErrors.BeginTransaction();
+
+            while (_errorService.DataQueue.TryDequeue(out var error))
             {
-                _dbContext.ExecuteCommand($"INSERT INTO ErrorNodes (Info) VALUES ('{errorNode.Info.Replace("'", string.Empty)}')");
+                using var cmd = CreateErrorInsertCommand();
+                ExecuteCommand(cmd, $"INSERT INTO Errors (Error) VALUES ('{error}')");
             }
+
+            transaction.Commit();
         }
+
+        private async Task CreateAndOpenConnectionDb()
+        {
+            var dbName = "Hashes.db";
+            var dbPath = Environment.CurrentDirectory + $@"\{dbName}";
+            _connectionForHashes = new SqliteConnection($"Data Source={dbPath}");
+            _connectionForErrors = new SqliteConnection($"Data Source={dbPath}");
+            await _connectionForHashes.OpenAsync();
+            await _connectionForErrors.OpenAsync();
+        }
+
+        private static void ExecuteCommand(SqliteCommand command, string textCommand)
+        {
+            command.CommandText = textCommand;
+            command.CommandType = CommandType.Text;
+            command.ExecuteNonQuery();
+        }
+
+        private SqliteCommand CreateErrorInsertCommand() => _connectionForErrors.CreateCommand();
+
+        private SqliteCommand CreateHashInsertCommand() => _connectionForHashes.CreateCommand(); 
     }
 }

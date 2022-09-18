@@ -3,27 +3,32 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using CalculateFilesHashCodes.Interfaces;
-using CalculateFilesHashCodes.Models;
+
+using CalculateFilesHashCodes.Services.Interfaces;
 
 namespace CalculateFilesHashCodes.Services
 {
     public class FileScannerService : IDataService<string>
     {
-        private readonly IDataService<ErrorNode> _errorService;
+        private readonly IDataService<string> _errorService;
         
         public ServiceStatus Status { get; set; }
 
         public ConcurrentQueue<string> DataQueue { get; } = new();
 
-        public FileScannerService(IDataService<ErrorNode> errorService)
+        public FileScannerService(IDataService<string> errorService)
         {
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
-        public Task StartScanDirectory(string directoriesPaths)
+        public async Task StartScanDirectory(string directoryPaths)
         {
-            return string.IsNullOrEmpty(directoriesPaths) ? Task.FromException(new Exception("Directories paths is null or empty")) : Task.Run(() => ScanPaths(directoriesPaths));
+            if (directoryPaths == null)
+            {
+                throw new ArgumentNullException(nameof(directoryPaths));  
+            }
+
+            await Task.Run(() => ScanPaths(directoryPaths));
         }
 
         private void ScanPaths(string directoriesPaths)
@@ -43,7 +48,7 @@ namespace CalculateFilesHashCodes.Services
                     }
                     else
                     {
-                        Console.WriteLine($"{path} is not a valid file or directory.");
+                        Console.Error.WriteLine($"{path} is not a valid file or directory.");
                     }
                 }
                 Status = ServiceStatus.Completed;
@@ -51,9 +56,9 @@ namespace CalculateFilesHashCodes.Services
             }
             catch (Exception ex)
             {
-                _errorService.DataQueue.Enqueue(new ErrorNode {Info = ex.Source + ex.Message + ex.StackTrace});
+                _errorService.DataQueue.Enqueue(ex.Message);
                 Status = ServiceStatus.Stopped;
-                Console.WriteLine($"Error: {ex.Message}");
+                Console.Error.WriteLine($"Error: {ex.Message}");
             }
         }
 
@@ -72,13 +77,13 @@ namespace CalculateFilesHashCodes.Services
                 }
                 catch (Exception ex)
                 {
-                    _errorService.DataQueue.Enqueue(new ErrorNode { Info = ex.Source + ex.Message + ex.StackTrace });
-                    Console.WriteLine($"Error: {ex.Message}");
+                    _errorService.DataQueue.Enqueue(ex.Message);
+                    Console.Error.WriteLine($"Error: {ex.Message}");
                 }
             }
         }
 
-        public void ProcessFile(string path)
+        public static void ProcessFile(string path)
         {
             Console.WriteLine($"Processed file '{path}'.");
         }
