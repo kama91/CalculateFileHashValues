@@ -4,9 +4,6 @@
 
 /bin
 /obj
-/.vs/CalculateFilesHashCodes/v16/.suo
-/.vs/CalculateFilesHashCodes/DesignTimeBuild
-/CalculateFilesHashCodes/obj/Debug/net5.0
-/CalculateFilesHashCodes/bin/Debug/net5.0
 /CalculateFilesHashCodes/obj
-/CalculateFilesHashCodes/bin/Release/net5.0
+/CalculateFilesHashCodes/bin/Debug/net6.0
+/CalculateFilesHashCodes/bin/Release/net6.0

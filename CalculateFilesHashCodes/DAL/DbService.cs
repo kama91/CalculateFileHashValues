@@ -1,72 +1,70 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
-
 using CalculateFilesHashCodes.Common;
 using CalculateFilesHashCodes.Models;
 using CalculateFilesHashCodes.Services;
-using CalculateFilesHashCodes.Services.Interfaces;
 
 using Microsoft.Data.Sqlite;
 
 namespace CalculateFilesHashCodes.DAL
 {
-    public class DbService : IDataService<object>
+    public class DbService
     {
-        private readonly IDataService<FileHashItem> _fileHashService;
-        private readonly IDataService<string> _errorService;
+        private readonly DataTransformer _dataTransformer;
+        private readonly ErrorService _errorService;
         private SqliteConnection _connectionForHashes;
         private SqliteConnection _connectionForErrors;
 
-        public ServiceStatus Status { get; set; }
-        public ConcurrentQueue<object> DataQueue { get; }
-       
         public DbService(
-            IDataService<FileHashItem> fileHashService,
-            IDataService<string> errorService)
+            DataTransformer dataTranformer,
+            ErrorService errorService)
         {
-            _fileHashService = fileHashService ?? throw new ArgumentNullException(nameof(fileHashService));
+            _dataTransformer = dataTranformer ?? throw new ArgumentNullException(nameof(dataTranformer));
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
         public async Task StartToWriteDataToDb()
         {
-            Status = ServiceStatus.Running;
             try
             {
                 await CreateAndOpenConnectionDb();
             }
             catch (Exception ex)
-            {
-                _errorService.DataQueue.Enqueue(ex.Message);
+            {                
                 Console.WriteLine(ex.Message);
+                
                 _connectionForHashes.Dispose();
+                
                 throw;
             }
 
-            await Task.WhenAll(WriteDataToDb(), WriteErrorToDb());
+           await Task.WhenAll(WriteDataToDb(), WriteErrorToDb());
 
-            Status = ServiceStatus.Completed;
             _connectionForHashes.Dispose();
+
             Console.WriteLine("DbService has finished work");
         }
 
         private async Task WriteDataToDb()
         {
             using var cmd = _connectionForHashes.CreateCommand();
+            
             ExecuteCommand(cmd, @"CREATE TABLE IF NOT EXISTS [Hashes] (    
-                    [Path] text NOT NULL,
-                    [HashValue] text NOT NULL);");
+                        [Path] text NOT NULL,
+                        [HashValue] text NOT NULL);");
 
-            await _fileHashService.HandlingData(MakeWriteData);
+            await _dataTransformer.HandlingDataUntilWorkStatusCompleted(MakeWriteData);
         }
 
         private void MakeWriteData()
         {
             using var transaction = _connectionForHashes.BeginTransaction();
 
-            while (_fileHashService.DataQueue.TryDequeue(out var item))
+            while (_dataTransformer.OutputData.TryDequeue(out var item)) 
             {
                 using var cmd = CreateHashInsertCommand();
                 ExecuteCommand(cmd, $"INSERT INTO Hashes (Path, HashValue) VALUES ('{item.Path}', '{item.HashValue}')");
@@ -78,17 +76,18 @@ namespace CalculateFilesHashCodes.DAL
         private async Task WriteErrorToDb()
         {
             using var cmd = _connectionForHashes.CreateCommand();
+            
             ExecuteCommand(cmd, @"CREATE TABLE IF NOT EXISTS [Errors] (
                     [Error] text NOT NULL);");
 
-            await _fileHashService.HandlingData(MakeWriteError);
+            await _dataTransformer.HandlingDataUntilWorkStatusCompleted(MakeWriteError);
         }
 
         private void MakeWriteError()
         {
             using var transaction = _connectionForErrors.BeginTransaction();
 
-            while (_errorService.DataQueue.TryDequeue(out var error))
+            while (_errorService.ErrorsQueue.TryDequeue(out var error))
             {
                 using var cmd = CreateErrorInsertCommand();
                 ExecuteCommand(cmd, $"INSERT INTO Errors (Error) VALUES ('{error}')");
@@ -101,8 +100,10 @@ namespace CalculateFilesHashCodes.DAL
         {
             var dbName = "Hashes.db";
             var dbPath = Environment.CurrentDirectory + $@"\{dbName}";
+            
             _connectionForHashes = new SqliteConnection($"Data Source={dbPath}");
             _connectionForErrors = new SqliteConnection($"Data Source={dbPath}");
+            
             await _connectionForHashes.OpenAsync();
             await _connectionForErrors.OpenAsync();
         }

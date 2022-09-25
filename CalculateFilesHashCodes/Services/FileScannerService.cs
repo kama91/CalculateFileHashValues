@@ -1,23 +1,25 @@
-﻿using System;
+﻿using CalculateFilesHashCodes.Models;
+
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-using CalculateFilesHashCodes.Services.Interfaces;
-
 namespace CalculateFilesHashCodes.Services
 {
-    public class FileScannerService : IDataService<string>
+    public class FileScannerService
     {
-        private readonly IDataService<string> _errorService;
+        private readonly DataTransformer _dataTransformer;
+        private readonly ErrorService _errorService;
         
-        public ServiceStatus Status { get; set; }
+        public DataReceivingStatus Status { get; set; }
 
-        public ConcurrentQueue<string> DataQueue { get; } = new();
-
-        public FileScannerService(IDataService<string> errorService)
+        public FileScannerService(
+            DataTransformer dataTransformer,
+            ErrorService errorService)
         {
+            this._dataTransformer = dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
@@ -35,7 +37,6 @@ namespace CalculateFilesHashCodes.Services
         {
             try
             {
-                Status = ServiceStatus.Running;
                 foreach (var path in directoriesPaths.Split(',').ToList())
                 {
                     if (File.Exists(path))
@@ -44,6 +45,7 @@ namespace CalculateFilesHashCodes.Services
                     }
                     else if (Directory.Exists(path))
                     {
+                        _dataTransformer.DataReceivingStatus = DataReceivingStatus.Running;
                         AddFilesToQueue(path);
                     }
                     else
@@ -51,35 +53,48 @@ namespace CalculateFilesHashCodes.Services
                         Console.Error.WriteLine($"{path} is not a valid file or directory.");
                     }
                 }
-                Status = ServiceStatus.Completed;
+
+                _dataTransformer.DataReceivingStatus = DataReceivingStatus.Completed;
+                
                 Console.WriteLine("FileScannerService has finished work");
             }
             catch (Exception ex)
             {
-                _errorService.DataQueue.Enqueue(ex.Message);
-                Status = ServiceStatus.Stopped;
+                _errorService.ErrorsQueue.Enqueue(ex.Message);
+                _dataTransformer.DataReceivingStatus = DataReceivingStatus.Stopped;
                 Console.Error.WriteLine($"Error: {ex.Message}");
             }
         }
 
         public void AddFilesToQueue(string targetDirectory)
         {
-            foreach (var fileName in Directory.GetFiles(targetDirectory))
+            try
             {
-                DataQueue.Enqueue(fileName);
+                foreach (var fileName in Directory.GetFiles(targetDirectory))
+                {
+                    _dataTransformer.InputData.Enqueue(fileName);
+                    throw new Exception("My Exception");
+                }
+
+                foreach (var subDirectory in Directory.GetDirectories(targetDirectory))
+                {
+                    try
+                    {
+                        AddFilesToQueue(subDirectory);
+                    }
+                    catch (Exception ex)
+                    {
+                        _errorService.ErrorsQueue.Enqueue(ex.Message);
+                        
+                        Console.Error.WriteLine($"Error: {ex.Message}");
+                    }
+                }
             }
-            
-            foreach (var subDirectory in Directory.GetDirectories(targetDirectory))
+            catch (Exception ex)
             {
-                try
-                {
-                    AddFilesToQueue(subDirectory);
-                }
-                catch (Exception ex)
-                {
-                    _errorService.DataQueue.Enqueue(ex.Message);
-                    Console.Error.WriteLine($"Error: {ex.Message}");
-                }
+                _errorService.ErrorsQueue.Enqueue(ex.Message);
+                
+                Console.Error.WriteLine($"Error: {ex.Message}");
             }
         }
 

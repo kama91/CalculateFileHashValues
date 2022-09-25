@@ -1,12 +1,12 @@
 ﻿using System.Collections.Concurrent;
 
-using CalculateFilesHashCodes.Services.Interfaces;
+using CalculateFilesHashCodes.Models;
 
 namespace CalculateFilesHashCodes.Services
 {
-    public sealed class ErrorService : IDataService<string>
+    public sealed class ErrorService
     {
-        public ServiceStatus Status { get; set; }
-        public ConcurrentQueue<string> DataQueue { get; } = new();
+        public DataReceivingStatus Status { get; set; }
+        public ConcurrentQueue<string> ErrorsQueue { get; } = new();
     }
 }

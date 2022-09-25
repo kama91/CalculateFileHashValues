@@ -1,17 +1,17 @@
-﻿using System.Collections.Concurrent;
+﻿using CalculateFilesHashCodes.Models;
+
+using System.Collections.Concurrent;
 
 namespace CalculateFilesHashCodes.Services.Interfaces
 {
-    public interface IDataService<T>
+    public interface IDataService<TI, TO>
     {
-        /// <summary>
-        /// Service operation status
-        /// </summary>
-        ServiceStatus Status { get; set; }
+        WorkStatus WorkStatus { get; }
 
-        /// <summary>
-        /// The collection of data that service fills
-        /// </summary>
-        ConcurrentQueue<T> DataQueue { get; }
+        DataReceivingStatus DataReceivingStatus { get; set; }
+
+        ConcurrentQueue<TI> InputData { get; } 
+
+        ConcurrentQueue<TO> OutputData { get; }
     }
 }
