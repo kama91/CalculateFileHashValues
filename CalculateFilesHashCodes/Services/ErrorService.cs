@@ -1,12 +1,15 @@
-﻿using System.Collections.Concurrent;
+﻿using CalculateFilesHashCodes.Services.Interfaces;
 
-using CalculateFilesHashCodes.Models;
+using System.Threading.Channels;
 
 namespace CalculateFilesHashCodes.Services
 {
-    public sealed class ErrorService
+    public sealed class ErrorService : IDataWriter<string>, IDataReader<string>
     {
-        public DataReceivingStatus Status { get; set; }
-        public ConcurrentQueue<string> ErrorsQueue { get; } = new();
+        private readonly Channel<string> _errorsChannel = Channel.CreateUnbounded<string>();
+
+        public ChannelReader<string> DataReader => _errorsChannel.Reader;
+
+        public ChannelWriter<string> DataWriter => _errorsChannel.Writer;
     }
 }

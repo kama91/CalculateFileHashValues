@@ -11,5 +11,12 @@ namespace CalculateFilesHashCodes.HashAlgorithms
 
             return SHA256.Create().ComputeHash(stream);
         }
+
+        public static byte[] ComputeMD5(string path)
+        {
+            using var stream = File.OpenRead(path);
+
+            return MD5.Create().ComputeHash(stream);
+        }
     }
 }

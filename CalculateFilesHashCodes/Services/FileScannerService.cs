@@ -1,7 +1,6 @@
-﻿using CalculateFilesHashCodes.Models;
+﻿using CalculateFilesHashCodes.Services.Interfaces;
 
 using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,16 +9,14 @@ namespace CalculateFilesHashCodes.Services
 {
     public class FileScannerService
     {
-        private readonly DataTransformer _dataTransformer;
+        private readonly IDataWriter<string> _dataTransformer;
         private readonly ErrorService _errorService;
         
-        public DataReceivingStatus Status { get; set; }
-
         public FileScannerService(
-            DataTransformer dataTransformer,
+            IDataWriter<string> dataTransformer,
             ErrorService errorService)
         {
-            this._dataTransformer = dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
+            _dataTransformer = dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
@@ -30,10 +27,10 @@ namespace CalculateFilesHashCodes.Services
                 throw new ArgumentNullException(nameof(directoryPaths));  
             }
 
-            await Task.Run(() => ScanPaths(directoryPaths));
+            await ScanPaths(directoryPaths);
         }
 
-        private void ScanPaths(string directoriesPaths)
+        private async Task ScanPaths(string directoriesPaths)
         {
             try
             {
@@ -45,8 +42,7 @@ namespace CalculateFilesHashCodes.Services
                     }
                     else if (Directory.Exists(path))
                     {
-                        _dataTransformer.DataReceivingStatus = DataReceivingStatus.Running;
-                        AddFilesToQueue(path);
+                        await AddFilesToQueue(path);
                     }
                     else
                     {
@@ -54,37 +50,35 @@ namespace CalculateFilesHashCodes.Services
                     }
                 }
 
-                _dataTransformer.DataReceivingStatus = DataReceivingStatus.Completed;
+                _dataTransformer.DataWriter.Complete();
                 
                 Console.WriteLine("FileScannerService has finished work");
             }
             catch (Exception ex)
             {
-                _errorService.ErrorsQueue.Enqueue(ex.Message);
-                _dataTransformer.DataReceivingStatus = DataReceivingStatus.Stopped;
+                await _errorService.DataWriter.WriteAsync(ex.Message);
                 Console.Error.WriteLine($"Error: {ex.Message}");
             }
         }
 
-        public void AddFilesToQueue(string targetDirectory)
+        public async Task AddFilesToQueue(string targetDirectory)
         {
             try
             {
                 foreach (var fileName in Directory.GetFiles(targetDirectory))
                 {
-                    _dataTransformer.InputData.Enqueue(fileName);
-                    throw new Exception("My Exception");
+                    await _dataTransformer.DataWriter.WriteAsync(fileName);
                 }
 
                 foreach (var subDirectory in Directory.GetDirectories(targetDirectory))
                 {
                     try
                     {
-                        AddFilesToQueue(subDirectory);
+                        await AddFilesToQueue(subDirectory);
                     }
                     catch (Exception ex)
                     {
-                        _errorService.ErrorsQueue.Enqueue(ex.Message);
+                        await _errorService.DataWriter.WriteAsync(ex.Message);
                         
                         Console.Error.WriteLine($"Error: {ex.Message}");
                     }
@@ -92,7 +86,7 @@ namespace CalculateFilesHashCodes.Services
             }
             catch (Exception ex)
             {
-                _errorService.ErrorsQueue.Enqueue(ex.Message);
+                await _errorService.DataWriter.WriteAsync(ex.Message);
                 
                 Console.Error.WriteLine($"Error: {ex.Message}");
             }
