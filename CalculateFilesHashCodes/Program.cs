@@ -36,9 +36,9 @@ namespace CalculateFilesHashCodes
                 var dbService = new DbService(dataTransformer, errorService);
 
                 await Task.WhenAll(
-                    fileScannerService.StartScanDirectory(directories?.Replace(@"\", @"\\")),
-                    dataTransformer.Transform(),
-                    dbService.StartToWriteDataToDb());
+                    fileScannerService.ScanDirectoriesAsync(directories?.Replace(@"\", @"\\")),
+                    dataTransformer.TransformAsync(),
+                    dbService.WriteDataAndErrorsAsync());
 
                 Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
                 Console.WriteLine("Process finished");

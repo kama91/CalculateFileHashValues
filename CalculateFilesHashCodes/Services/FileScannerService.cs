@@ -20,7 +20,7 @@ namespace CalculateFilesHashCodes.Services
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
-        public async Task StartScanDirectory(string directoryPaths)
+        public async Task ScanDirectoriesAsync(string directoryPaths)
         {
             if (directoryPaths == null)
             {
@@ -42,7 +42,7 @@ namespace CalculateFilesHashCodes.Services
                     }
                     else if (Directory.Exists(path))
                     {
-                        await AddFilesToQueue(path);
+                        await AddFilePathsToDataTransform(path);
                     }
                     else
                     {
@@ -52,7 +52,7 @@ namespace CalculateFilesHashCodes.Services
 
                 _dataTransformer.DataWriter.Complete();
                 
-                Console.WriteLine("FileScannerService has finished work");
+                Console.WriteLine("File scanner service has finished work");
             }
             catch (Exception ex)
             {
@@ -61,7 +61,7 @@ namespace CalculateFilesHashCodes.Services
             }
         }
 
-        public async Task AddFilesToQueue(string targetDirectory)
+        public async Task AddFilePathsToDataTransform(string targetDirectory)
         {
             try
             {
@@ -74,7 +74,7 @@ namespace CalculateFilesHashCodes.Services
                 {
                     try
                     {
-                        await AddFilesToQueue(subDirectory);
+                        await AddFilePathsToDataTransform(subDirectory);
                     }
                     catch (Exception ex)
                     {

@@ -16,7 +16,7 @@ namespace CalculateFilesHashCodes.Services
 
         public ChannelWriter<string> DataWriter => _inputDataChannel.Writer;
 
-        public ChannelReader<FileHashItem> DataReader => _tranformedDataChannel;
+        public ChannelReader<FileHashItem> DataReader => _tranformedDataChannel.Reader;
 
         public DataTransformer(
             Func<string, FileHashItem> transformAlgorithm,
@@ -27,15 +27,16 @@ namespace CalculateFilesHashCodes.Services
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
-        public async Task Transform()
+        public async Task TransformAsync()
         {
+            Console.WriteLine("Data transformer was started");
 
-            await TransformAndWriteToOutputChannel();
+            await TransformAndWriteToChannel();
 
-            Console.WriteLine("Data transformed successfully completed");
+            Console.WriteLine("Data transformered successfully completed");
         }
 
-        private async Task TransformAndWriteToOutputChannel()
+        private async Task TransformAndWriteToChannel()
         {
             while (!_inputDataChannel.Reader.Completion.IsCompleted && 
                 _inputDataChannel.Reader.TryRead(out var filePath))

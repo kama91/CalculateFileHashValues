@@ -14,7 +14,7 @@ namespace CalculateFilesHashCodes.DAL
     {
         private readonly IDataReader<FileHashItem> _dataTransformer;
         private readonly ErrorService _errorService;
-        private SqliteConnection _connectionForHashes;
+        private SqliteConnection _hashesConnection;
         private SqliteConnection _errorsConnection;
 
         public DbService(
@@ -25,86 +25,111 @@ namespace CalculateFilesHashCodes.DAL
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
-        public async Task StartToWriteDataToDb()
+        public async Task WriteDataAndErrorsAsync()
         {
             try
             {
-                await CreateAndOpenConnectionDb();
+                await CreateAndOpenConnectionsDb();
             }
             catch (Exception ex)
-            {                
+            {
                 Console.WriteLine(ex.Message);
-                
-                _connectionForHashes.Dispose();
-                
+
+                await ClearConnections();
+
                 throw;
             }
 
-            Parallel.Invoke(WriteDataToDb, WriteErrorToDb);
+            await Task.WhenAll(WriteDataToDb(), WriteErrorToDb());
 
-            _connectionForHashes.Dispose();
+            await ClearConnections();
 
             Console.WriteLine("DbService has finished work");
         }
 
-        private void WriteDataToDb()
+        private async Task ClearConnections()
         {
-            using var createTableCmd = _connectionForHashes.CreateCommand();
-            
-            ExecuteCommand(createTableCmd, @"CREATE TABLE IF NOT EXISTS [Hashes] (    
+            if (_hashesConnection != null)
+            {
+                await _hashesConnection.DisposeAsync();
+            }
+
+            if (_errorsConnection != null)
+            {
+                await _errorsConnection.DisposeAsync();
+            }
+        }
+
+        private async Task WriteDataToDb()
+        {
+            using var createTableCmd = _hashesConnection.CreateCommand();
+
+            await ExecuteCommand(createTableCmd, @"CREATE TABLE IF NOT EXISTS [Hashes] (    
                         [Path] text NOT NULL,
                         [HashValue] text NOT NULL);");
 
-            using var transaction = _connectionForHashes.BeginTransaction();
+            using var transaction = await _hashesConnection.BeginTransactionAsync();
 
             while (!_dataTransformer.DataReader.Completion.IsCompleted &&
                 _dataTransformer.DataReader.TryRead(out var item))
             {
-                using var insertCmd = _connectionForHashes.CreateCommand();
-                ExecuteCommand(insertCmd, $"INSERT INTO Hashes VALUES ('{item.Path}', '{item.HashValue}')");
+                using var insertCmd = _hashesConnection.CreateCommand();
+                await ExecuteCommand(insertCmd, $"INSERT INTO Hashes VALUES ('{item.Path}', '{item.HashValue}')");
             }
 
-            transaction.Commit();
+            await transaction.CommitAsync();
 
             _errorService.DataWriter.Complete();
         }
 
-        private void WriteErrorToDb()
+        private async Task WriteErrorToDb()
         {
             using var createTableCmd = _errorsConnection.CreateCommand();
 
-            ExecuteCommand(createTableCmd, @"CREATE TABLE IF NOT EXISTS [Errors] (
+            await ExecuteCommand(createTableCmd, @"CREATE TABLE IF NOT EXISTS [Errors] (
                     [Error] text NOT NULL);");
 
-            using var transaction = _errorsConnection.BeginTransaction();
+            using var transaction = await _errorsConnection.BeginTransactionAsync();
+
+            var errorCounter = 0;
 
             while (!_errorService.DataReader.Completion.IsCompleted &&
                 _errorService.DataReader.TryRead(out var error))
             {
                 using var insertCmd = _errorsConnection.CreateCommand();
-                ExecuteCommand(insertCmd, $"INSERT INTO Errors VALUES ('{error.Replace("'", string.Empty)}')");
+                await ExecuteCommand(insertCmd, $"INSERT INTO Errors VALUES ('{error.Replace("'", string.Empty)}')");
+                ++errorCounter;
             }
 
-            transaction.Commit();
+            if (errorCounter == 0)
+            {
+                await transaction.DisposeAsync();
+                using var dropTableCmd = _errorsConnection.CreateCommand();
+                await ExecuteCommand(dropTableCmd, @"DROP TABLE ERRORS"); 
+            }
+            else
+            {
+                await transaction.CommitAsync();
+            }
         }
 
-        private async Task CreateAndOpenConnectionDb()
+        private async Task CreateAndOpenConnectionsDb()
         {
             var dbName = "Hashes.db";
             var dbPath = Environment.CurrentDirectory + $@"\{dbName}";
             
-            _connectionForHashes = new SqliteConnection($"Data Source={dbPath}");
+            _hashesConnection = new SqliteConnection($"Data Source={dbPath}");
             _errorsConnection = new SqliteConnection($"Data Source={dbPath}");
             
-            await _connectionForHashes.OpenAsync();
+            await _hashesConnection.OpenAsync();
             await _errorsConnection.OpenAsync();
         }
 
-        private static void ExecuteCommand(SqliteCommand command, string textCommand)
+        private static async Task ExecuteCommand(SqliteCommand command, string textCommand)
         {
             command.CommandText = textCommand;
             command.CommandType = CommandType.Text;
-            command.ExecuteNonQuery();
+            await command.ExecuteNonQueryAsync();
         }
     }
 }
