@@ -28,33 +28,21 @@ namespace CalculateFilesHashCodes.Services
                 throw new ArgumentNullException(nameof(directoryPaths));  
             }
 
-            await ScanPaths(directoryPaths);
-        }
-
-        private async Task ScanPaths(string directoriesPaths)
-        {
-            try
+            foreach (var path in directoryPaths.Split(','))
             {
-                foreach (var path in directoriesPaths.Split(',').ToList())
+                if (Directory.Exists(path))
                 {
-                    if (Directory.Exists(path))
-                    {
-                        await AddFilePathsToDataTransformer(path);
-                    }
-                    else
-                    {
-                        Console.Error.WriteLine($"{path} is not exists.");
-                    }
+                    await AddFilePathsToDataTransformer(path);
                 }
+                else
+                {
+                    Console.Error.WriteLine($"{path} is not exists.");
+                }
+            }
 
-                _dataTransformer.DataWriter.Complete();
-                
-                Console.WriteLine("File scanner service has finished work");
-            }
-            catch (Exception ex)
-            {
-                await WriteError(ex.Message);
-            }
+            _dataTransformer.DataWriter.Complete();
+
+            Console.WriteLine("File scanner service has finished work");
         }
 
         private async Task AddFilePathsToDataTransformer(string path)
