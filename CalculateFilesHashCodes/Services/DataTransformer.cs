@@ -7,19 +7,19 @@ using CalculateFilesHashCodes.Services.Interfaces;
 
 namespace CalculateFilesHashCodes.Services
 {
-    public class DataTransformer : IDataWriter<string>, IDataReader<FileHashItem>
+    public class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
     {
         private readonly IDataWriter<string> _errorService;
-        private readonly Channel<string> _inputDataChannel = Channel.CreateUnbounded<string>();
-        private readonly Channel<FileHashItem> _tranformedDataChannel = Channel.CreateUnbounded<FileHashItem>();
-        private readonly Func<string, FileHashItem> _transformAlgorithm;
+        private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>();
+        private readonly Channel<TO> _tranformedDataChannel = Channel.CreateUnbounded<TO>();
+        private readonly Func<TI, TO> _transformAlgorithm;
 
-        public ChannelWriter<string> DataWriter => _inputDataChannel.Writer;
+        public ChannelWriter<TI> DataWriter => _inputDataChannel.Writer;
 
-        public ChannelReader<FileHashItem> DataReader => _tranformedDataChannel.Reader;
+        public ChannelReader<TO> DataReader => _tranformedDataChannel.Reader;
 
         public DataTransformer(
-            Func<string, FileHashItem> transformAlgorithm,
+            Func<TI, TO> transformAlgorithm,
             IDataWriter<string> errorService
             )
         {

@@ -31,7 +31,7 @@ namespace CalculateFilesHashCodes
                 }
 
                 var errorService = new ErrorService();
-                var dataTransformer = new DataTransformer(CreateFileHashItem, errorService);
+                var dataTransformer = new DataTransformer<string, FileHashItem>(CreateFileHashItem, errorService);
                 var fileScannerService = new FileScannerService(dataTransformer, errorService);
                 var dbService = new DbService(dataTransformer, errorService);
 

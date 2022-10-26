@@ -1,6 +1,7 @@
 ﻿using CalculateFilesHashCodes.Services.Interfaces;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,17 +37,13 @@ namespace CalculateFilesHashCodes.Services
             {
                 foreach (var path in directoriesPaths.Split(',').ToList())
                 {
-                    if (File.Exists(path))
+                    if (Directory.Exists(path))
                     {
-                        ProcessFile(path);
-                    }
-                    else if (Directory.Exists(path))
-                    {
-                        await AddFilePathsToDataTransform(path);
+                        await AddFilePathsToDataTransformer(path);
                     }
                     else
                     {
-                        Console.Error.WriteLine($"{path} is not a valid file or directory.");
+                        Console.Error.WriteLine($"{path} is not exists.");
                     }
                 }
 
@@ -56,45 +53,53 @@ namespace CalculateFilesHashCodes.Services
             }
             catch (Exception ex)
             {
-                await _errorService.DataWriter.WriteAsync(ex.Message);
-                Console.Error.WriteLine($"Error: {ex.Message}");
+                await WriteError(ex.Message);
             }
         }
 
-        public async Task AddFilePathsToDataTransform(string targetDirectory)
+        private async Task AddFilePathsToDataTransformer(string path)
         {
-            try
-            {
-                foreach (var fileName in Directory.GetFiles(targetDirectory))
-                {
-                    await _dataTransformer.DataWriter.WriteAsync(fileName);
-                }
+            var paths = new Queue<string>();
+            paths.Enqueue(path);
 
-                foreach (var subDirectory in Directory.GetDirectories(targetDirectory))
+            while (paths.Count > 0)
+            {
+                path = paths.Dequeue();
+                try
                 {
-                    try
+                    foreach (string subDir in Directory.GetDirectories(path))
                     {
-                        await AddFilePathsToDataTransform(subDirectory);
-                    }
-                    catch (Exception ex)
-                    {
-                        await _errorService.DataWriter.WriteAsync(ex.Message);
-                        
-                        Console.Error.WriteLine($"Error: {ex.Message}");
+                        paths.Enqueue(subDir);
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                await _errorService.DataWriter.WriteAsync(ex.Message);
-                
-                Console.Error.WriteLine($"Error: {ex.Message}");
+                catch (Exception ex)
+                {
+                    await WriteError(ex.Message);
+                }
+                string[] files = null;
+                try
+                {
+                    files = Directory.GetFiles(path);
+                }
+                catch (Exception ex)
+                {
+                    await WriteError(ex.Message);
+                }
+                if (files != null)
+                {
+                    foreach (var file in files)
+                    {
+                        await _dataTransformer.DataWriter.WriteAsync(file);
+                    }
+                }
             }
         }
 
-        public static void ProcessFile(string path)
+        private async Task WriteError(string error)
         {
-            Console.WriteLine($"Processed file '{path}'.");
+            await _errorService.DataWriter.WriteAsync(error);
+
+            Console.Error.WriteLine($"Error: {error}");
         }
     }
 }
