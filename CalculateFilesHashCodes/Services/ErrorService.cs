@@ -1,15 +1,16 @@
-﻿using CalculateFilesHashCodes.Services.Interfaces;
+﻿using CalculateFilesHashCodes.Models;
+using CalculateFilesHashCodes.Services.Interfaces;
 
 using System.Threading.Channels;
 
 namespace CalculateFilesHashCodes.Services
 {
-    public sealed class ErrorService : IDataWriter<string>, IDataReader<string>
+    public sealed class ErrorService : IDataWriter<Error>, IDataReader<Error>
     {
-        private readonly Channel<string> _errorsChannel = Channel.CreateUnbounded<string>();
+        private readonly Channel<Error> _errorsChannel = Channel.CreateUnbounded<Error>();
 
-        public ChannelReader<string> DataReader => _errorsChannel.Reader;
+        public ChannelReader<Error> DataReader => _errorsChannel.Reader;
 
-        public ChannelWriter<string> DataWriter => _errorsChannel.Writer;
+        public ChannelWriter<Error> DataWriter => _errorsChannel.Writer;
     }
 }
