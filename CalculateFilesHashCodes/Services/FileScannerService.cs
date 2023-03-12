@@ -1,9 +1,9 @@
-﻿using CalculateFilesHashCodes.Services.Interfaces;
+﻿using CalculateFilesHashCodes.Models;
+using CalculateFilesHashCodes.Services.Interfaces;
 
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace CalculateFilesHashCodes.Services
@@ -12,7 +12,7 @@ namespace CalculateFilesHashCodes.Services
     {
         private readonly IDataWriter<string> _dataTransformer;
         private readonly ErrorService _errorService;
-        
+
         public FileScannerService(
             IDataWriter<string> dataTransformer,
             ErrorService errorService)
@@ -25,7 +25,7 @@ namespace CalculateFilesHashCodes.Services
         {
             if (directoryPaths == null)
             {
-                throw new ArgumentNullException(nameof(directoryPaths));  
+                throw new ArgumentNullException(nameof(directoryPaths));
             }
 
             foreach (var path in directoryPaths.Split(','))
@@ -62,7 +62,7 @@ namespace CalculateFilesHashCodes.Services
                 }
                 catch (Exception ex)
                 {
-                    await WriteError(ex.Message);
+                    await WriteError(ex.ToString());
                 }
                 string[] files = null;
                 try
@@ -71,7 +71,7 @@ namespace CalculateFilesHashCodes.Services
                 }
                 catch (Exception ex)
                 {
-                    await WriteError(ex.Message);
+                    await WriteError(ex.ToString());
                 }
                 if (files != null)
                 {
@@ -85,7 +85,7 @@ namespace CalculateFilesHashCodes.Services
 
         private async Task WriteError(string error)
         {
-            await _errorService.DataWriter.WriteAsync(error);
+            await _errorService.DataWriter.WriteAsync(new Error(error));
 
             Console.Error.WriteLine($"Error: {error}");
         }

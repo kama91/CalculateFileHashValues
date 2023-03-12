@@ -1,15 +1,14 @@
-﻿using System;
+﻿using CalculateFilesHashCodes.Models;
+using CalculateFilesHashCodes.Services.Interfaces;
+using System;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-
-using CalculateFilesHashCodes.Models;
-using CalculateFilesHashCodes.Services.Interfaces;
 
 namespace CalculateFilesHashCodes.Services
 {
     public class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
     {
-        private readonly IDataWriter<string> _errorService;
+        private readonly IDataWriter<Error> _errorService;
         private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>();
         private readonly Channel<TO> _tranformedDataChannel = Channel.CreateUnbounded<TO>();
         private readonly Func<TI, TO> _transformAlgorithm;
@@ -20,7 +19,7 @@ namespace CalculateFilesHashCodes.Services
 
         public DataTransformer(
             Func<TI, TO> transformAlgorithm,
-            IDataWriter<string> errorService
+            IDataWriter<Error> errorService
             )
         {
             _transformAlgorithm = transformAlgorithm ?? throw new ArgumentNullException(nameof(transformAlgorithm));
@@ -33,12 +32,12 @@ namespace CalculateFilesHashCodes.Services
 
             await TransformAndWriteToChannel();
 
-            Console.WriteLine("Data transformered successfully completed");
+            Console.WriteLine("Data transformer successfully completed");
         }
 
         private async Task TransformAndWriteToChannel()
         {
-            while (!_inputDataChannel.Reader.Completion.IsCompleted && 
+            while (!_inputDataChannel.Reader.Completion.IsCompleted &&
                 _inputDataChannel.Reader.TryRead(out var filePath))
             {
                 try
@@ -47,9 +46,10 @@ namespace CalculateFilesHashCodes.Services
                 }
                 catch (Exception ex)
                 {
-                    await _errorService.DataWriter.WriteAsync(ex.Message);
+                    var fullError = ex.ToString();
+                    await _errorService.DataWriter.WriteAsync(new Error(fullError));
 
-                    Console.Error.WriteLine($"Error: {ex.Message}");
+                    Console.Error.WriteLine($"Error: {fullError}");
                 }
             }
 

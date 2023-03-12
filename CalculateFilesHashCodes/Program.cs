@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
-
-using CalculateFilesHashCodes.DAL;
+﻿using CalculateFilesHashCodes.DAL;
 using CalculateFilesHashCodes.Models;
 using CalculateFilesHashCodes.Services;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace CalculateFilesHashCodes
 {
@@ -15,9 +15,10 @@ namespace CalculateFilesHashCodes
 
         private static async Task Main()
         {
+            Console.WriteLine("Enter a directories paths separated by a comma");
+
             while (!_stopProcess)
             {
-                Console.WriteLine("Enter a directories paths separated by a comma");
                 var directories = Console.ReadLine();
                 var timer = Stopwatch.StartNew();
                 Console.WriteLine("Please, standby........");
@@ -33,7 +34,12 @@ namespace CalculateFilesHashCodes
                 var errorService = new ErrorService();
                 var dataTransformer = new DataTransformer<string, FileHashItem>(CreateFileHashItem, errorService);
                 var fileScannerService = new FileScannerService(dataTransformer, errorService);
-                var dbService = new DbService(dataTransformer, errorService);
+                var config = new ConfigurationBuilder()
+                        .SetBasePath(Directory.GetCurrentDirectory())
+                        .AddJsonFile("appsettings.json").Build();
+
+                var dbConectionString = config.GetConnectionString("SqLite");
+                var dbService = new DbService(dataTransformer, errorService, new FileContext(dbConectionString));
 
                 await Task.WhenAll(
                     fileScannerService.ScanDirectoriesAsync(directories?.Replace(@"\", @"\\")),
