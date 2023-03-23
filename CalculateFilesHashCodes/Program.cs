@@ -39,7 +39,8 @@ namespace CalculateFilesHashCodes
                         .AddJsonFile("appsettings.json").Build();
 
                 var dbConectionString = config.GetConnectionString("SqLite");
-                var dbService = new DbService(dataTransformer, errorService, new FileContext(dbConectionString));
+                using var ctx = new FileContext(dbConectionString);
+                var dbService = new DbService(dataTransformer, errorService, ctx);
 
                 await Task.WhenAll(
                     fileScannerService.ScanDirectoriesAsync(directories?.Replace(@"\", @"\\")),
