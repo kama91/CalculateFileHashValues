@@ -21,12 +21,14 @@ namespace CalculateFilesHashCodes.Services
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
-        public async Task ScanDirectoriesAsync(string directoryPaths)
+        public async Task ScanDirectories(string directoryPaths)
         {
             if (directoryPaths == null)
             {
                 throw new ArgumentNullException(nameof(directoryPaths));
             }
+
+            Console.WriteLine("File scanner service was started");
 
             foreach (var path in directoryPaths.Split(','))
             {
@@ -40,7 +42,7 @@ namespace CalculateFilesHashCodes.Services
                 }
             }
 
-            _dataTransformer.DataWriter.Complete();
+            _dataTransformer.ErrorWriter.Complete();
 
             Console.WriteLine("File scanner service has finished work");
         }
@@ -77,7 +79,7 @@ namespace CalculateFilesHashCodes.Services
                 {
                     foreach (var file in files)
                     {
-                        await _dataTransformer.DataWriter.WriteAsync(file);
+                        await _dataTransformer.ErrorWriter.WriteAsync(file);
                     }
                 }
             }
@@ -85,7 +87,7 @@ namespace CalculateFilesHashCodes.Services
 
         private async Task WriteError(string error)
         {
-            await _errorService.DataWriter.WriteAsync(new Error(error));
+            await _errorService.ErrorWriter.WriteAsync(new Error(error));
 
             Console.Error.WriteLine($"Error: {error}");
         }

@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CalculateFilesHashCodes.DAL
 {
-    public class FileContext : DbContext
+    public class HashValuesContext : DbContext
     {
         private readonly string _connectionString;
 
-        public FileContext(string connectionString)
+        public HashValuesContext(string connectionString)
         {
             _connectionString = connectionString ?? throw new System.ArgumentNullException(nameof(connectionString));
             Database.EnsureDeleted();

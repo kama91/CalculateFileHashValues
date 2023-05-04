@@ -13,9 +13,9 @@ namespace CalculateFilesHashCodes.Services
         private readonly Channel<TO> _tranformedDataChannel = Channel.CreateUnbounded<TO>();
         private readonly Func<TI, TO> _transformAlgorithm;
 
-        public ChannelWriter<TI> DataWriter => _inputDataChannel.Writer;
+        public ChannelWriter<TI> ErrorWriter => _inputDataChannel.Writer;
 
-        public ChannelReader<TO> DataReader => _tranformedDataChannel.Reader;
+        public ChannelReader<TO> ErrorReader => _tranformedDataChannel.Reader;
 
         public DataTransformer(
             Func<TI, TO> transformAlgorithm,
@@ -26,7 +26,7 @@ namespace CalculateFilesHashCodes.Services
             _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
         }
 
-        public async Task TransformAsync()
+        public async Task Transform()
         {
             Console.WriteLine("Data transformer was started");
 
@@ -37,8 +37,20 @@ namespace CalculateFilesHashCodes.Services
 
         private async Task TransformAndWriteToChannel()
         {
-            while (!_inputDataChannel.Reader.Completion.IsCompleted &&
-                _inputDataChannel.Reader.TryRead(out var filePath))
+            while (!_inputDataChannel.Reader.Completion.IsCompleted)
+            {
+                await ReadAndWrite();
+            }
+
+            await ReadAndWrite();
+
+            _tranformedDataChannel.Writer.Complete();
+            _errorService.ErrorWriter.Complete();
+        }
+
+        private async Task ReadAndWrite()
+        {
+            while (_inputDataChannel.Reader.TryRead(out var filePath))
             {
                 try
                 {
@@ -47,13 +59,11 @@ namespace CalculateFilesHashCodes.Services
                 catch (Exception ex)
                 {
                     var fullError = ex.ToString();
-                    await _errorService.DataWriter.WriteAsync(new Error(fullError));
+                    await _errorService.ErrorWriter.WriteAsync(new Error(fullError));
 
                     Console.Error.WriteLine($"Error: {fullError}");
                 }
             }
-
-            _tranformedDataChannel.Writer.Complete();
         }
     }
 }

@@ -4,6 +4,6 @@ namespace CalculateFilesHashCodes.Services.Interfaces
 {
     public interface IDataWriter<TD>
     {
-        ChannelWriter<TD> DataWriter { get; }
+        ChannelWriter<TD> ErrorWriter { get; }
     }
 }

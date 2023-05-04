@@ -4,9 +4,6 @@
 
 /bin
 /obj
-/CalculateFilesHashCodes/obj
-/CalculateFilesHashCodes/bin/Debug/net6.0
-/CalculateFilesHashCodes/bin/Release/net6.0
-/CalculateFilesHashCodes/bin/Release/net7.0
 /.vs/CalculateFilesHashCodes
-/CalculateFilesHashCodes/bin/Debug/net7.0
+/CalculateFileHashValues/obj
+/CalculateFileHashValues/bin

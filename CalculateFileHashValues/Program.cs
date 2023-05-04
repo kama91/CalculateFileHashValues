@@ -3,6 +3,7 @@ using CalculateFilesHashCodes.Models;
 using CalculateFilesHashCodes.Services;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -39,13 +40,23 @@ namespace CalculateFilesHashCodes
                         .AddJsonFile("appsettings.json").Build();
 
                 var dbConectionString = config.GetConnectionString("SqLite");
-                using var ctx = new FileContext(dbConectionString);
-                var dbService = new DbService(dataTransformer, errorService, ctx);
+                using var dataCtx = new HashValuesContext(dbConectionString);
+                using var errorCtx = new HashValuesContext(dbConectionString);
+                dataCtx.ChangeTracker.AutoDetectChangesEnabled = false;
+                errorCtx.ChangeTracker.AutoDetectChangesEnabled = false;
+                var dbService = new DbService(dataTransformer, errorService, dataCtx, errorCtx);
 
-                await Task.WhenAll(
-                    fileScannerService.ScanDirectoriesAsync(directories?.Replace(@"\", @"\\")),
-                    dataTransformer.TransformAsync(),
-                    dbService.WriteDataAndErrorsAsync());
+                var tasks = new List<Task>
+                {
+                    Task.Run(async () => await fileScannerService.ScanDirectories(directories?.Replace(@"\", @"\\"))),
+                    Task.Run(dataTransformer.Transform),
+                    Task.Run(dbService.WriteDataAndErrors)
+                };
+
+                await Parallel.ForEachAsync(tasks, async (task, _) =>
+                {
+                    await task;
+                });
 
                 Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
                 Console.WriteLine("Process finished");
