@@ -9,8 +9,8 @@ namespace CalculateFilesHashCodes.Services
     {
         private readonly Channel<Error> _errorsChannel = Channel.CreateUnbounded<Error>();
 
-        public ChannelReader<Error> ErrorReader => _errorsChannel.Reader;
+        public ChannelReader<Error> Reader => _errorsChannel.Reader;
 
-        public ChannelWriter<Error> ErrorWriter => _errorsChannel.Writer;
+        public ChannelWriter<Error> Writer => _errorsChannel.Writer;
     }
 }

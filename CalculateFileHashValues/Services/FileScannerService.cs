@@ -42,7 +42,7 @@ namespace CalculateFilesHashCodes.Services
                 }
             }
 
-            _dataTransformer.ErrorWriter.Complete();
+            _dataTransformer.Writer.Complete();
 
             Console.WriteLine("File scanner service has finished work");
         }
@@ -79,7 +79,7 @@ namespace CalculateFilesHashCodes.Services
                 {
                     foreach (var file in files)
                     {
-                        await _dataTransformer.ErrorWriter.WriteAsync(file);
+                        await _dataTransformer.Writer.WriteAsync(file);
                     }
                 }
             }
@@ -87,7 +87,7 @@ namespace CalculateFilesHashCodes.Services
 
         private async Task WriteError(string error)
         {
-            await _errorService.ErrorWriter.WriteAsync(new Error(error));
+            await _errorService.Writer.WriteAsync(new Error(error));
 
             Console.Error.WriteLine($"Error: {error}");
         }

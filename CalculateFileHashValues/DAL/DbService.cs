@@ -46,7 +46,7 @@ namespace CalculateFilesHashCodes.DAL
 
         private async Task WriteDataToDb()
         {
-            while (!_dataTransformer.ErrorReader.Completion.IsCompleted)
+            while (!_dataTransformer.Reader.Completion.IsCompleted)
             {
                 await WriteData();
             }
@@ -58,7 +58,7 @@ namespace CalculateFilesHashCodes.DAL
 
         private async Task WriteData()
         {
-            while (_dataTransformer.ErrorReader.TryRead(out var item))
+            while (_dataTransformer.Reader.TryRead(out var item))
             {
                 await _dataContext.HashItems.AddAsync(item);
             }
@@ -66,7 +66,7 @@ namespace CalculateFilesHashCodes.DAL
 
         private async Task WriteErrorToDb()
         {
-            while (!_errorService.ErrorReader.Completion.IsCompleted)
+            while (!_errorService.Reader.Completion.IsCompleted)
             {
                 await WriteError();
             }
@@ -79,7 +79,7 @@ namespace CalculateFilesHashCodes.DAL
 
         private async Task WriteError()
         {
-            while (_errorService.ErrorReader.TryRead(out var error))
+            while (_errorService.Reader.TryRead(out var error))
             {
                 await _errorContext.Errors.AddAsync(error);
             }

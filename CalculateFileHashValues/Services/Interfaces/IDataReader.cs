@@ -4,6 +4,6 @@ namespace CalculateFilesHashCodes.Services.Interfaces
 {
     public interface IDataReader<TD>
     {
-        ChannelReader<TD> ErrorReader { get; }
+        ChannelReader<TD> Reader { get; }
     }
 }

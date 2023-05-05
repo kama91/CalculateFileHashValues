@@ -13,9 +13,9 @@ namespace CalculateFilesHashCodes.Services
         private readonly Channel<TO> _tranformedDataChannel = Channel.CreateUnbounded<TO>();
         private readonly Func<TI, TO> _transformAlgorithm;
 
-        public ChannelWriter<TI> ErrorWriter => _inputDataChannel.Writer;
+        public ChannelWriter<TI> Writer => _inputDataChannel.Writer;
 
-        public ChannelReader<TO> ErrorReader => _tranformedDataChannel.Reader;
+        public ChannelReader<TO> Reader => _tranformedDataChannel.Reader;
 
         public DataTransformer(
             Func<TI, TO> transformAlgorithm,
@@ -45,7 +45,7 @@ namespace CalculateFilesHashCodes.Services
             await ReadAndWrite();
 
             _tranformedDataChannel.Writer.Complete();
-            _errorService.ErrorWriter.Complete();
+            _errorService.Writer.Complete();
         }
 
         private async Task ReadAndWrite()
@@ -59,7 +59,7 @@ namespace CalculateFilesHashCodes.Services
                 catch (Exception ex)
                 {
                     var fullError = ex.ToString();
-                    await _errorService.ErrorWriter.WriteAsync(new Error(fullError));
+                    await _errorService.Writer.WriteAsync(new Error(fullError));
 
                     Console.Error.WriteLine($"Error: {fullError}");
                 }
