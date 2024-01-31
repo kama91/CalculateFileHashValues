@@ -1,27 +1,27 @@
-﻿using CalculateFilesHashCodes.Models;
+﻿using System;
+using CalculateFileHashValues.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CalculateFilesHashCodes.DAL
+namespace CalculateFileHashValues.DAL;
+
+public sealed class HashValuesContext : DbContext
 {
-    public class HashValuesContext : DbContext
+    private readonly string _connectionString;
+
+    public HashValuesContext(string connectionString)
     {
-        private readonly string _connectionString;
+        _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        Database.EnsureDeleted();
+        Database.EnsureCreated();
+    }
 
-        public HashValuesContext(string connectionString)
-        {
-            _connectionString = connectionString ?? throw new System.ArgumentNullException(nameof(connectionString));
-            Database.EnsureDeleted();
-            Database.EnsureCreated();
-        }
+    public DbSet<FileHashItem> HashItems { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlite(@$"Data Source={_connectionString}");
-            base.OnConfiguring(optionsBuilder);
-        }
+    public DbSet<Error> Errors { get; set; }
 
-        public DbSet<FileHashItem> HashItems { get; set; }
-
-        public DbSet<Error> Errors { get; set; }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseSqlite(@$"Data Source={_connectionString}");
+        base.OnConfiguring(optionsBuilder);
     }
 }

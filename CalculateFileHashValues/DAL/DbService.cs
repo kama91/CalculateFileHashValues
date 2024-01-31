@@ -1,88 +1,92 @@
-﻿using CalculateFilesHashCodes.Models;
-using CalculateFilesHashCodes.Services;
-using CalculateFilesHashCodes.Services.Interfaces;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using CalculateFileHashValues.Models;
+using CalculateFileHashValues.Services;
+using CalculateFileHashValues.Services.Interfaces;
 
-namespace CalculateFilesHashCodes.DAL
+namespace CalculateFileHashValues.DAL;
+
+public class DbService
 {
-    public class DbService
+    private readonly HashValuesContext _dataContext;
+    private readonly IDataReader<Task<FileHashItem>> _dataTransformer;
+    private readonly HashValuesContext _errorContext;
+    private readonly ErrorService _errorService;
+
+    public DbService(
+        IDataReader<Task<FileHashItem>> dataTransformer,
+        ErrorService errorService,
+        HashValuesContext dataContext,
+        HashValuesContext errorContext)
     {
-        private readonly IDataReader<FileHashItem> _dataTransformer;
-        private readonly ErrorService _errorService;
-        private readonly HashValuesContext _dataContext;
-        private readonly HashValuesContext _errorContext;
+        _dataTransformer = dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
+        _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
+        _dataContext = dataContext ?? throw new ArgumentNullException(nameof(dataContext));
+        _errorContext = errorContext ?? throw new ArgumentNullException(nameof(errorContext));
+    }
 
-        public DbService(
-            IDataReader<FileHashItem> dataTranformer,
-            ErrorService errorService,
-            HashValuesContext dataContext,
-            HashValuesContext errorContext)
+    public async Task WriteDataAndErrors()
+    {
+        Console.WriteLine("DbService was started");
+
+        var tasks = new List<Task>
         {
-            _dataTransformer = dataTranformer ?? throw new ArgumentNullException(nameof(dataTranformer));
-            _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
-            _dataContext = dataContext ?? throw new ArgumentNullException(nameof(dataContext));
-            _errorContext = errorContext ?? throw new ArgumentNullException(nameof(errorContext));
-        }
+            WriteDataToDb(),
+            WriteErrorToDb()
+        };
 
-        public async Task WriteDataAndErrors()
+        await Parallel.ForEachAsync(tasks, async (task, _) => { await task; });
+
+        Console.WriteLine("DbService has finished work");
+    }
+
+    private async Task WriteDataToDb()
+    {
+        while (!_dataTransformer.Reader.Completion.IsCompleted)
         {
-            Console.WriteLine("DbService was started");
-
-            var tasks = new List<Task>
-            {
-                WriteDataToDb(),
-                WriteErrorToDb()
-            };
-
-            await Parallel.ForEachAsync(tasks, async (task, _) =>
-            {
-                await task;
-            });
-
-            Console.WriteLine("DbService has finished work");
-        }
-
-        private async Task WriteDataToDb()
-        {
-            while (!_dataTransformer.Reader.Completion.IsCompleted)
-            {
-                await WriteData();
-            }
-
             await WriteData();
-
-            await _dataContext.SaveChangesAsync();
         }
 
-        private async Task WriteData()
+        await WriteData();
+
+        _errorService.Writer.Complete();
+
+        await _dataContext.SaveChangesAsync();
+    }
+
+    private async Task WriteData()
+    {
+        try
         {
             while (_dataTransformer.Reader.TryRead(out var item))
             {
-                await _dataContext.HashItems.AddAsync(item);
+                await _dataContext.HashItems.AddAsync(await item);
             }
         }
-
-        private async Task WriteErrorToDb()
+        catch (Exception ex)
         {
-            while (!_errorService.Reader.Completion.IsCompleted)
-            {
-                await WriteError();
-            }
+            _errorService.Writer.TryWrite(new Error(ex.ToString()));
+        }
+    }
 
+    private async Task WriteErrorToDb()
+    {
+        while (!_errorService.Reader.Completion.IsCompleted)
+        {
             await WriteError();
-
-            await _errorContext.SaveChangesAsync();
-
         }
 
-        private async Task WriteError()
+        await WriteError();
+
+        await _errorContext.SaveChangesAsync();
+    }
+
+    private async Task WriteError()
+    {
+        while (_errorService.Reader.TryRead(out var error))
         {
-            while (_errorService.Reader.TryRead(out var error))
-            {
-                await _errorContext.Errors.AddAsync(error);
-            }
+            await _errorContext.Errors.AddAsync(error);
         }
     }
 }

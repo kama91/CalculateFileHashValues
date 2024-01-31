@@ -1,22 +1,24 @@
 ﻿using System.IO;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
-namespace CalculateFilesHashCodes.HashAlgorithms
+namespace CalculateFileHashValues.HashAlgorithms;
+
+public static class HashAlgorithms
 {
-    public static class HashAlgorithms
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static async Task<byte[]> ComputeSha256(string path)
     {
-        public static byte[] ComputeSHA256(string path)
-        {
-            using var stream = File.OpenRead(path);
+        await using var stream = File.OpenRead(path);
 
-            return SHA256.Create().ComputeHash(stream);
-        }
+        return await SHA256.Create().ComputeHashAsync(stream);
+    }
 
-        public static byte[] ComputeMD5(string path)
-        {
-            using var stream = File.OpenRead(path);
+    public static async Task<byte[]> ComputeMd5(string path)
+    {
+        await using var stream = File.OpenRead(path);
 
-            return MD5.Create().ComputeHash(stream);
-        }
+        return await MD5.Create().ComputeHashAsync(stream);
     }
 }

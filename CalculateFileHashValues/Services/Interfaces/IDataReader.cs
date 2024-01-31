@@ -1,9 +1,8 @@
 ﻿using System.Threading.Channels;
 
-namespace CalculateFilesHashCodes.Services.Interfaces
+namespace CalculateFileHashValues.Services.Interfaces;
+
+public interface IDataReader<TD>
 {
-    public interface IDataReader<TD>
-    {
-        ChannelReader<TD> Reader { get; }
-    }
+    ChannelReader<TD> Reader { get; }
 }

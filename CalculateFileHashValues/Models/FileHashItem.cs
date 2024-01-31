@@ -1,17 +1,6 @@
-﻿namespace CalculateFilesHashCodes.Models
+﻿namespace CalculateFileHashValues.Models;
+
+public record FileHashItem(string Path, string HashValue) : IEntity
 {
-    public record FileHashItem : IEntity
-    {
-        public FileHashItem(string path, string hashValue)
-        {
-            Path = path;
-            HashValue = hashValue;
-        }
-
-        public int Id { get; set; }
-
-        public string Path { get; set; }
-
-        public string HashValue { get; set; }
-    }
+    public int Id { get; set; }
 }

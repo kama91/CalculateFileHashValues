@@ -1,7 +1,6 @@
-﻿namespace CalculateFilesHashCodes.Models
+﻿namespace CalculateFileHashValues.Models;
+
+public interface IEntity
 {
-    public interface IEntity
-    {
-        int Id { get; set; }
-    }
+    int Id { get; set; }
 }

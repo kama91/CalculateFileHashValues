@@ -1,14 +1,6 @@
-﻿namespace CalculateFilesHashCodes.Models
+﻿namespace CalculateFileHashValues.Models;
+
+public record Error(string Description) : IEntity
 {
-    public record Error : IEntity
-    {
-        public Error(string description)
-        {
-            Description = description;
-        }
-
-        public int Id { get; set; }
-
-        public string Description { get; set; }
-    }
+    public int Id { get; set; }
 }

@@ -1,9 +1,12 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
-################################################################################
-
-/bin
-/obj
-/.vs/CalculateFilesHashCodes
-/CalculateFileHashValues/obj
-/CalculateFileHashValues/bin
+*.suo
+*.user
+.editorconfig
+*.DotSettings
+.vs/
+.idea/
+.code/
+.tmp/
+logs/
+[Bb]in/
+[Oo]bj/
+[Oo]utput/
