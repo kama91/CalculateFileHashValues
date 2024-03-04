@@ -1,6 +1,6 @@
 ﻿namespace CalculateFileHashValues.Models;
 
-public record Error(string Description) : IEntity
+public sealed record Error(string Description) : IEntity
 {
     public int Id { get; set; }
 }

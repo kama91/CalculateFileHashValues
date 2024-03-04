@@ -7,7 +7,7 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public class FileScanner
+public sealed class FileScanner
 {
     private readonly IDataWriter<string> _dataTransformer;
     private readonly ErrorService _errorService;

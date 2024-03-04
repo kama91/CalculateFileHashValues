@@ -7,7 +7,7 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.DAL;
 
-public class DbService
+public sealed class DbService
 {
     private readonly HashValuesContext _dataContext;
     private readonly IDataReader<Task<FileHashItem>> _dataTransformer;
@@ -36,8 +36,10 @@ public class DbService
             WriteErrorToDb()
         };
 
-        await Parallel.ForEachAsync(tasks, async (task, _) => { await task; });
-
+        await Task.WhenAll(tasks);
+        
+        await _dataContext.SaveChangesAsync();
+        
         Console.WriteLine("DbService has finished work");
     }
 
@@ -51,8 +53,6 @@ public class DbService
         await WriteData();
 
         _errorService.Writer.Complete();
-
-        await _dataContext.SaveChangesAsync();
     }
 
     private async Task WriteData()
@@ -78,8 +78,6 @@ public class DbService
         }
 
         await WriteError();
-
-        await _errorContext.SaveChangesAsync();
     }
 
     private async Task WriteError()

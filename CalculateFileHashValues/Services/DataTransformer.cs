@@ -6,7 +6,7 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
+public sealed class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
 {
     private readonly IDataWriter<Error> _errorService;
     private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>();
@@ -32,7 +32,7 @@ public class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
 
         await TransformAndWriteToChannel();
 
-        Console.WriteLine("Data transformer successfully completed");
+        Console.WriteLine("Data transformer has finished work");
     }
 
     private async Task TransformAndWriteToChannel()

@@ -25,15 +25,6 @@ internal static class HashSum
             var timer = Stopwatch.StartNew();
             Console.WriteLine("Please, standby........");
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static async Task<FileHashItem> CreateFileHashItem(string filePath)
-            {
-                return new FileHashItem(
-                    filePath,
-                    BitConverter.ToString(await HashAlgorithms.HashAlgorithms.ComputeSha256(filePath))
-                );
-            }
-
             var errorService = new ErrorService();
             var dataTransformer = new DataTransformer<string, Task<FileHashItem>>(CreateFileHashItem, errorService);
             var fileScannerService = new FileScanner(dataTransformer, errorService);
@@ -55,8 +46,8 @@ internal static class HashSum
                 Task.Run(dbService.WriteDataAndErrors)
             };
 
-            await Parallel.ForEachAsync(tasks, async (task, _) => { await task; });
-
+            await Task.WhenAll(tasks);
+            
             Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
             Console.WriteLine("Process finished");
             Console.WriteLine("Close window? 0 - close, 1 - enter new paths");
@@ -68,6 +59,15 @@ internal static class HashSum
                 default:
                     _stopProcess = true;
                     break;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static async Task<FileHashItem> CreateFileHashItem(string filePath)
+            {
+                return new FileHashItem(
+                    filePath,
+                    BitConverter.ToString(await HashAlgorithms.HashAlgorithms.ComputeSha256(filePath))
+                );
             }
         }
     }
