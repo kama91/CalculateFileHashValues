@@ -6,21 +6,20 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public sealed class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
+public sealed class DataTransformer<TI, TO>(
+    Func<TI, TO> transformAlgorithm,
+    IDataWriter<Error> errorService
+) : IDataWriter<TI>, IDataReader<TO>
 {
-    private readonly IDataWriter<Error> _errorService;
-    private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>();
-    private readonly Func<TI, TO> _transformAlgorithm;
-    private readonly Channel<TO> _transformedDataChannel = Channel.CreateUnbounded<TO>();
+    private readonly IDataWriter<Error> _errorService =
+        errorService ?? throw new ArgumentNullException(nameof(errorService));
 
-    public DataTransformer(
-        Func<TI, TO> transformAlgorithm,
-        IDataWriter<Error> errorService
-    )
-    {
-        _transformAlgorithm = transformAlgorithm ?? throw new ArgumentNullException(nameof(transformAlgorithm));
-        _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
-    }
+    private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>();
+
+    private readonly Func<TI, TO> _transformAlgorithm =
+        transformAlgorithm ?? throw new ArgumentNullException(nameof(transformAlgorithm));
+
+    private readonly Channel<TO> _transformedDataChannel = Channel.CreateUnbounded<TO>();
 
     public ChannelReader<TO> Reader => _transformedDataChannel.Reader;
 
@@ -37,10 +36,7 @@ public sealed class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
 
     private async Task TransformAndWriteToChannel()
     {
-        while (!_inputDataChannel.Reader.Completion.IsCompleted)
-        {
-            await ReadAndWrite();
-        }
+        while (!_inputDataChannel.Reader.Completion.IsCompleted) await ReadAndWrite();
 
         await ReadAndWrite();
 
@@ -50,7 +46,6 @@ public sealed class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
     private async Task ReadAndWrite()
     {
         while (_inputDataChannel.Reader.TryRead(out var filePath))
-        {
             try
             {
                 var transformedData = _transformAlgorithm.Invoke(filePath);
@@ -63,6 +58,5 @@ public sealed class DataTransformer<TI, TO> : IDataWriter<TI>, IDataReader<TO>
 
                 await Console.Error.WriteLineAsync($"Error: {fullError}");
             }
-        }
     }
 }

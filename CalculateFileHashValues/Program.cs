@@ -47,7 +47,7 @@ internal static class HashSum
             };
 
             await Task.WhenAll(tasks);
-            
+
             Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
             Console.WriteLine("Process finished");
             Console.WriteLine("Close window? 0 - close, 1 - enter new paths");

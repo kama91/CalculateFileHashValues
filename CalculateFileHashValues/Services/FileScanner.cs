@@ -7,18 +7,14 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public sealed class FileScanner
+public sealed class FileScanner(
+    IDataWriter<string> dataTransformer,
+    ErrorService errorService)
 {
-    private readonly IDataWriter<string> _dataTransformer;
-    private readonly ErrorService _errorService;
+    private readonly IDataWriter<string> _dataTransformer =
+        dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
 
-    public FileScanner(
-        IDataWriter<string> dataTransformer,
-        ErrorService errorService)
-    {
-        _dataTransformer = dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
-        _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
-    }
+    private readonly ErrorService _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
 
     public async Task ScanDirectories(string directoryPaths)
     {
@@ -27,16 +23,10 @@ public sealed class FileScanner
         Console.WriteLine("File scanner was started");
 
         foreach (var path in directoryPaths.Split(','))
-        {
             if (Directory.Exists(path))
-            {
                 await AddFilePathsToDataTransformer(path);
-            }
             else
-            {
                 await Console.Error.WriteLineAsync($"{path} is not exists.");
-            }
-        }
 
         _dataTransformer.Writer.Complete();
 
@@ -53,10 +43,7 @@ public sealed class FileScanner
             path = paths.Dequeue();
             try
             {
-                foreach (var subDir in Directory.GetDirectories(path))
-                {
-                    paths.Enqueue(subDir);
-                }
+                foreach (var subDir in Directory.GetDirectories(path)) paths.Enqueue(subDir);
             }
             catch (Exception ex)
             {
@@ -74,11 +61,8 @@ public sealed class FileScanner
             }
 
             if (files == null) continue;
-            
-            foreach (var file in files)
-            {
-                await _dataTransformer.Writer.WriteAsync(file);
-            }
+
+            foreach (var file in files) await _dataTransformer.Writer.WriteAsync(file);
         }
     }
 
