@@ -14,7 +14,7 @@ public static class HashAlgorithms
 
         return await SHA256.Create().ComputeHashAsync(stream);
     }
-
+    
     public static async Task<byte[]> ComputeMd5(string path)
     {
         await using var stream = File.OpenRead(path);

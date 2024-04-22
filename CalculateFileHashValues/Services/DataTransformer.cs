@@ -8,10 +8,10 @@ namespace CalculateFileHashValues.Services;
 
 public sealed class DataTransformer<TI, TO>(
     Func<TI, TO> transformAlgorithm,
-    IDataWriter<Error> errorService
+    IDataWriter<ErrorItem> errorService
 ) : IDataWriter<TI>, IDataReader<TO>
 {
-    private readonly IDataWriter<Error> _errorService =
+    private readonly IDataWriter<ErrorItem> _errorService =
         errorService ?? throw new ArgumentNullException(nameof(errorService));
 
     private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>();
@@ -36,7 +36,10 @@ public sealed class DataTransformer<TI, TO>(
 
     private async Task TransformAndWriteToChannel()
     {
-        while (!_inputDataChannel.Reader.Completion.IsCompleted) await ReadAndWrite();
+        while (!_inputDataChannel.Reader.Completion.IsCompleted)
+        {
+            await ReadAndWrite();
+        }
 
         await ReadAndWrite();
 
@@ -46,17 +49,18 @@ public sealed class DataTransformer<TI, TO>(
     private async Task ReadAndWrite()
     {
         while (_inputDataChannel.Reader.TryRead(out var filePath))
+        {
             try
             {
-                var transformedData = _transformAlgorithm.Invoke(filePath);
-                await _transformedDataChannel.Writer.WriteAsync(transformedData);
+                await _transformedDataChannel.Writer.WriteAsync(_transformAlgorithm.Invoke(filePath));
             }
             catch (Exception ex)
             {
                 var fullError = ex.ToString();
-                await _errorService.Writer.WriteAsync(new Error(fullError));
-
+                await _errorService.Writer.WriteAsync(new ErrorItem(fullError));
+        
                 await Console.Error.WriteLineAsync($"Error: {fullError}");
             }
+        }
     }
 }

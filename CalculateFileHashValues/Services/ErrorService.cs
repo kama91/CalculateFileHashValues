@@ -4,11 +4,11 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public sealed class ErrorService : IDataWriter<Error>, IDataReader<Error>
+public sealed class ErrorService : IDataWriter<ErrorItem>, IDataReader<ErrorItem>
 {
-    private readonly Channel<Error> _errorsChannel = Channel.CreateUnbounded<Error>();
+    private readonly Channel<ErrorItem> _errorsChannel = Channel.CreateUnbounded<ErrorItem>();
 
-    public ChannelReader<Error> Reader => _errorsChannel.Reader;
+    public ChannelReader<ErrorItem> Reader => _errorsChannel.Reader;
 
-    public ChannelWriter<Error> Writer => _errorsChannel.Writer;
+    public ChannelWriter<ErrorItem> Writer => _errorsChannel.Writer;
 }

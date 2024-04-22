@@ -1,8 +1,8 @@
 ﻿using System;
-using CalculateFileHashValues.Models;
+using CalculateFileHashValues.DataAccess.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CalculateFileHashValues.DAL;
+namespace CalculateFileHashValues.DataAccess;
 
 public sealed class HashValuesContext : DbContext
 {
@@ -11,17 +11,18 @@ public sealed class HashValuesContext : DbContext
     public HashValuesContext(string connectionString)
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
-        Database.EnsureDeleted();
+        //Database.EnsureDeleted();
         Database.EnsureCreated();
     }
 
-    public DbSet<FileHashItem> HashItems { get; set; }
+    public DbSet<FileHashEntity> FileHashes { get; set; }
 
-    public DbSet<Error> Errors { get; set; }
+    public DbSet<ErrorEntity> Errors { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite(@$"Data Source={_connectionString}");
+        optionsBuilder.UseNpgsql(_connectionString, 
+            o => o.MinBatchSize(10).MinBatchSize(1000));
         base.OnConfiguring(optionsBuilder);
     }
 }

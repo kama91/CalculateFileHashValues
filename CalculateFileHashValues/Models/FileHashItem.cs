@@ -1,6 +1,18 @@
-﻿namespace CalculateFileHashValues.Models;
+﻿using Microsoft.Extensions.ObjectPool;
 
-public sealed record FileHashItem(string Path, string HashValue) : IEntity
+namespace CalculateFileHashValues.Models;
+
+public sealed record FileHashItem : IResettable
 {
-    public int Id { get; set; }
+    public string Path { get; set; }
+    
+    public string HashValue { get; set; }
+    
+    public bool TryReset()
+    {
+        Path = string.Empty;
+        HashValue = string.Empty;
+
+        return true;
+    }
 }
