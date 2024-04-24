@@ -39,15 +39,6 @@ public sealed class DataTransformer<TI, TO>(
 
     public async Task Transform()
     {
-        Console.WriteLine("Data transformer was started");
-
-        await TransformAndWriteToChannel();
-
-        Console.WriteLine("Data transformer has finished work");
-    }
-
-    private async Task TransformAndWriteToChannel()
-    {
         await _inputDataChannel.Reader.ProcessData(ReadAndWrite);
 
         _transformedDataChannel.Writer.TryComplete();

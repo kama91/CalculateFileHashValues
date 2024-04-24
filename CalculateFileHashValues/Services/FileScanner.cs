@@ -20,8 +20,6 @@ public sealed class FileScanner(
     {
         ArgumentNullException.ThrowIfNull(directoryPaths);
 
-        Console.WriteLine("File scanner was started");
-
         foreach (var path in directoryPaths.Split(','))
         {
             if (Directory.Exists(path))
@@ -35,8 +33,6 @@ public sealed class FileScanner(
         }
 
         _dataTransformer.Writer.TryComplete();
-
-        Console.WriteLine("File scanner has finished work");
     }
 
     private async Task AddFilePathsToDataTransformer(string path)

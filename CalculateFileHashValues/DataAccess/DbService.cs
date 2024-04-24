@@ -15,7 +15,7 @@ public sealed class DbService(
     HashValuesContext dataContext,
     HashValuesContext errorContext)
 {
-    private int _filesCounter = 0;
+    private int _filesCounter;
     
     private readonly HashValuesContext _dataContext =
         dataContext ?? throw new ArgumentNullException(nameof(dataContext));
@@ -30,11 +30,8 @@ public sealed class DbService(
 
     public async Task WriteDataAndErrors()
     {
-        Console.WriteLine("DbService was started");
-        
         await Task.WhenAll(WriteDataToDb(), WriteErrorToDb());
 
-        Console.WriteLine("DbService has finished work");
         Console.WriteLine($"{_filesCounter} files were processed"); 
     }
 

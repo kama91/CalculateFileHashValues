@@ -53,7 +53,6 @@ internal static class HashSum
                 Task.Run(dbService.WriteDataAndErrors));
             
             Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
-            Console.WriteLine("Process finished");
             Console.WriteLine("Close window? 0 - close, 1 - enter new paths");
 
             switch (Console.ReadLine())
