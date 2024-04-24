@@ -1,18 +1,9 @@
-﻿using Microsoft.Extensions.ObjectPool;
+﻿using System;
 
 namespace CalculateFileHashValues.Models;
 
-public sealed record FileHashItem : IResettable
+public readonly struct FileHashItem
 {
-    public string Path { get; set; }
-    
-    public string HashValue { get; set; }
-    
-    public bool TryReset()
-    {
-        Path = string.Empty;
-        HashValue = string.Empty;
-
-        return true;
-    }
+    public ReadOnlyMemory<char> Path { get; init; }
+    public ReadOnlyMemory<byte> HashValue { get; init; }
 }

@@ -1,3 +1,6 @@
 namespace CalculateFileHashValues.Models;
 
-public sealed record ErrorItem(string Description);
+public readonly struct ErrorItem
+{
+    public string Description { get; init; }
+};

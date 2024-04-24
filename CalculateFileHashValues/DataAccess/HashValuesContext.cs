@@ -16,13 +16,12 @@ public sealed class HashValuesContext : DbContext
     }
 
     public DbSet<FileHashEntity> FileHashes { get; set; }
-
     public DbSet<ErrorEntity> Errors { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.UseNpgsql(_connectionString, 
-            o => o.MinBatchSize(10).MinBatchSize(1000));
+            o => o.MinBatchSize(1000));
         base.OnConfiguring(optionsBuilder);
     }
 }

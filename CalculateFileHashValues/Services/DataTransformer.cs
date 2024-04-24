@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using CalculateFileHashValues.Extensions;
 using CalculateFileHashValues.Models;
 using CalculateFileHashValues.Services.Interfaces;
 
@@ -14,12 +16,22 @@ public sealed class DataTransformer<TI, TO>(
     private readonly IDataWriter<ErrorItem> _errorService =
         errorService ?? throw new ArgumentNullException(nameof(errorService));
 
-    private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>();
+    private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>(new UnboundedChannelOptions
+    {
+        AllowSynchronousContinuations = true,
+        SingleReader = true,
+        SingleWriter = true,
+    });
+    
+    private readonly Channel<TO> _transformedDataChannel = Channel.CreateUnbounded<TO>(new UnboundedChannelOptions
+    {
+        AllowSynchronousContinuations = true,
+        SingleReader = true,
+        SingleWriter = true,
+    });
 
     private readonly Func<TI, TO> _transformAlgorithm =
         transformAlgorithm ?? throw new ArgumentNullException(nameof(transformAlgorithm));
-
-    private readonly Channel<TO> _transformedDataChannel = Channel.CreateUnbounded<TO>();
 
     public ChannelReader<TO> Reader => _transformedDataChannel.Reader;
 
@@ -36,29 +48,26 @@ public sealed class DataTransformer<TI, TO>(
 
     private async Task TransformAndWriteToChannel()
     {
-        while (!_inputDataChannel.Reader.Completion.IsCompleted)
-        {
-            await ReadAndWrite();
-        }
+        await _inputDataChannel.Reader.ProcessData(ReadAndWrite);
 
-        await ReadAndWrite();
-
-        _transformedDataChannel.Writer.Complete();
+        _transformedDataChannel.Writer.TryComplete();
     }
 
     private async Task ReadAndWrite()
     {
-        while (_inputDataChannel.Reader.TryRead(out var filePath))
+        await foreach (var path in _inputDataChannel.Reader.ReadAllAsync())
         {
             try
             {
-                await _transformedDataChannel.Writer.WriteAsync(_transformAlgorithm.Invoke(filePath));
+                await _transformedDataChannel.Writer.WriteAsync(_transformAlgorithm.Invoke(path));
             }
             catch (Exception ex)
             {
                 var fullError = ex.ToString();
-                await _errorService.Writer.WriteAsync(new ErrorItem(fullError));
-        
+                await _errorService.Writer.WriteAsync(new ErrorItem
+                {
+                    Description = fullError
+                });
                 await Console.Error.WriteLineAsync($"Error: {fullError}");
             }
         }

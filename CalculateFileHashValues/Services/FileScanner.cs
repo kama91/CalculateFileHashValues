@@ -34,7 +34,7 @@ public sealed class FileScanner(
             }
         }
 
-        _dataTransformer.Writer.Complete();
+        _dataTransformer.Writer.TryComplete();
 
         Console.WriteLine("File scanner has finished work");
     }
@@ -59,28 +59,26 @@ public sealed class FileScanner(
                 await WriteError(ex.ToString());
             }
 
-            string[] files = null;
             try
             {
-                files = Directory.GetFiles(path);
+               foreach (var file in Directory.GetFiles(path))
+               {
+                   await _dataTransformer.Writer.WriteAsync(file);
+               }
             }
             catch (Exception ex)
             {
                 await WriteError(ex.ToString());
-            }
-
-            if (files == null) continue;
-
-            foreach (var file in files)
-            {
-                await _dataTransformer.Writer.WriteAsync(file);
             }
         }
     }
 
     private async Task WriteError(string error)
     {
-        await _errorService.Writer.WriteAsync(new ErrorItem(error));
+        await _errorService.Writer.WriteAsync(new ErrorItem
+        {
+            Description = error
+        });
 
         await Console.Error.WriteLineAsync($"Error: {error}");
     }

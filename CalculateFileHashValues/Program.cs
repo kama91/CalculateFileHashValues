@@ -7,7 +7,6 @@ using CalculateFileHashValues.DataAccess;
 using CalculateFileHashValues.Models;
 using CalculateFileHashValues.Services;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.ObjectPool;
 
 namespace CalculateFileHashValues;
 
@@ -19,28 +18,23 @@ internal static class HashSum
     {
         while (!_stopProcess)
         {
-            Console.WriteLine("Enter directory paths separated by a comma");
+            Console.WriteLine("Enter directory paths separated by comma");
             
             var directories = Console.ReadLine();
             var timer = Stopwatch.StartNew();
             Console.WriteLine("Please, standby........");
 
-            var provider = new DefaultObjectPoolProvider();
-            var policy = new DefaultPooledObjectPolicy<FileHashItem>();
-            var hashItemsPool = provider.Create(policy);
-            
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            async Task<FileHashItem> CreateFileHashItem(string filePath)
+            FileHashItem CreateFileHashItem(string filePath)
             {
-                var hashItem = hashItemsPool.Get();
-                hashItem.Path = filePath;
-                hashItem.HashValue = BitConverter.ToString(await HashAlgorithms.HashAlgorithms.ComputeSha256(filePath));
-
-                return hashItem;
+                return new FileHashItem
+                {
+                    Path = new ReadOnlyMemory<char>(filePath.ToCharArray()) ,
+                    HashValue = HashAlgorithms.HashAlgorithms.ComputeSha256Sync(filePath)
+                };
             }
             
             var errorService = new ErrorService();
-            var dataTransformer = new DataTransformer<string, Task<FileHashItem>>(CreateFileHashItem, errorService);
+            var dataTransformer = new DataTransformer<string, FileHashItem>(CreateFileHashItem, errorService);
             var fileScannerService = new FileScanner(dataTransformer, errorService);
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -51,7 +45,7 @@ internal static class HashSum
             await using var errorCtx = new HashValuesContext(dbConnectionString);
             dataCtx.ChangeTracker.AutoDetectChangesEnabled = false;
             errorCtx.ChangeTracker.AutoDetectChangesEnabled = false;
-            var dbService = new DbService(dataTransformer, errorService, dataCtx, errorCtx, hashItemsPool);
+            var dbService = new DbService(dataTransformer, errorService, dataCtx, errorCtx);
 
             await Task.WhenAll(
                 Task.Run(() => fileScannerService.ScanDirectories(directories?.Replace(@"\", @"\\"))),
