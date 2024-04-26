@@ -6,12 +6,13 @@ namespace CalculateFileHashValues.DataAccess;
 
 public sealed class HashValuesContext : DbContext
 {
+   private const string Schema = "hash_values";
+    
     private readonly string _connectionString;
 
     public HashValuesContext(string connectionString)
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
-        //Database.EnsureDeleted();
         Database.EnsureCreated();
     }
 
@@ -20,8 +21,17 @@ public sealed class HashValuesContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseNpgsql(_connectionString, 
-            o => o.MinBatchSize(1000));
+        optionsBuilder.UseNpgsql(_connectionString);
+        optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
         base.OnConfiguring(optionsBuilder);
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<FileHashEntity>()
+            .ToTable("files_hashes", Schema);
+        
+        modelBuilder.Entity<ErrorEntity>()
+            .ToTable("errors", Schema);
     }
 }

@@ -29,7 +29,7 @@ internal static class HashSum
                 return new FileHashItem
                 {
                     Path = new ReadOnlyMemory<char>(filePath.ToCharArray()) ,
-                    HashValue = HashAlgorithms.HashAlgorithms.ComputeSha256Sync(filePath)
+                    Hash = HashAlgorithms.HashAlgorithms.ComputeSha256Sync(filePath)
                 };
             }
             
@@ -43,8 +43,6 @@ internal static class HashSum
             var dbConnectionString = config.GetConnectionString("Postgres");
             await using var dataCtx = new HashValuesContext(dbConnectionString);
             await using var errorCtx = new HashValuesContext(dbConnectionString);
-            dataCtx.ChangeTracker.AutoDetectChangesEnabled = false;
-            errorCtx.ChangeTracker.AutoDetectChangesEnabled = false;
             var dbService = new DbService(dataTransformer, errorService, dataCtx, errorCtx);
 
             await Task.WhenAll(

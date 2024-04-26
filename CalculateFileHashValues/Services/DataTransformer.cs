@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using CalculateFileHashValues.Extensions;
@@ -50,7 +49,7 @@ public sealed class DataTransformer<TI, TO>(
         {
             try
             {
-                await _transformedDataChannel.Writer.WriteAsync(_transformAlgorithm.Invoke(path));
+               await _transformedDataChannel.Writer.WriteAsync(_transformAlgorithm.Invoke(path));
             }
             catch (Exception ex)
             {

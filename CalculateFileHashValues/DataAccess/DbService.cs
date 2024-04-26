@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using CalculateFileHashValues.DataAccess.Models;
 using CalculateFileHashValues.Extensions;
@@ -52,7 +51,7 @@ public sealed class DbService(
             
             await foreach (var item in _dataTransformer.Reader.ReadAllAsync())
             {
-                _dataContext.FileHashes.Add(new FileHashEntity(item.Path.ToString(), BitConverter.ToString(item.HashValue.ToArray())));
+                _dataContext.FileHashes.Add(new FileHashEntity(item.Path.ToString(), BitConverter.ToString(item.Hash)));
                 ++_filesCounter;
                 
                 ++batchCount;
