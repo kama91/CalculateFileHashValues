@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
-using CalculateFileHashValues.Models;
+using CalculateFileHashValues.DataAccess.Models;
 using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
@@ -18,13 +19,15 @@ public sealed class FileScanner(
 
     public async Task ScanDirectories(string directoryPaths)
     {
+        await Task.Yield();
+        
         ArgumentNullException.ThrowIfNull(directoryPaths);
 
         foreach (var path in directoryPaths.Split(','))
         {
             if (Directory.Exists(path))
             {
-                await AddFilePathsToDataTransformer(path);
+                await ParallelScan(path);
             }
             else
             {
@@ -35,47 +38,65 @@ public sealed class FileScanner(
         _dataTransformer.Writer.TryComplete();
     }
 
-    private async Task AddFilePathsToDataTransformer(string path)
+    private async Task WriteError(string error) => await _errorService.Writer.WriteAsync(new Error(error));
+    
+    private async Task ParallelScan(string root)
     {
-        var paths = new Queue<string>();
-        paths.Enqueue(path);
+        var processorCount = Environment.ProcessorCount;
 
-        while (paths.Count > 0)
+        var dirs = new Queue<string>();
+
+        dirs.Enqueue(root);
+
+        while (dirs.Count > 0)
         {
-            path = paths.Dequeue();
+            var currentDir = dirs.Dequeue();
+            
+            string[] subDirs = [];
+            string[] files = [];
+
             try
             {
-                foreach (var subDir in Directory.GetDirectories(path))
+                subDirs = Directory.GetDirectories(currentDir);
+            }
+            catch (Exception ex)
+            {
+                await WriteError(ex.ToString());
+            }
+
+            try
+            {
+                files = Directory.GetFiles(currentDir);
+            }
+            catch (Exception ex)
+            {
+                await WriteError(ex.ToString());
+            }
+
+            if (files.Length < processorCount)
+            {
+                foreach (var file in files)
                 {
-                    paths.Enqueue(subDir);
+                    await _dataTransformer.Writer.WriteAsync(file);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                await WriteError(ex.ToString());
+                var parallelOptions = new ParallelOptions
+                {
+                    CancellationToken = CancellationToken.None,
+                    MaxDegreeOfParallelism = processorCount,
+                };
+                await Parallel.ForEachAsync(files, parallelOptions,async (file, ct) =>
+                { 
+                    await _dataTransformer.Writer.WriteAsync(file, ct);
+                });
             }
 
-            try
+            foreach (var str in subDirs)
             {
-               foreach (var file in Directory.GetFiles(path))
-               {
-                   await _dataTransformer.Writer.WriteAsync(file);
-               }
-            }
-            catch (Exception ex)
-            {
-                await WriteError(ex.ToString());
+                dirs.Enqueue(str);
             }
         }
-    }
-
-    private async Task WriteError(string error)
-    {
-        await _errorService.Writer.WriteAsync(new ErrorItem
-        {
-            Description = error
-        });
-
-        await Console.Error.WriteLineAsync($"Error: {error}");
     }
 }

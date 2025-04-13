@@ -1,34 +1,38 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using CalculateFileHashValues.DataAccess.Models;
 using CalculateFileHashValues.Extensions;
-using CalculateFileHashValues.Models;
 using CalculateFileHashValues.Services;
 using CalculateFileHashValues.Services.Interfaces;
+using Npgsql;
 
 namespace CalculateFileHashValues.DataAccess;
 
 public sealed class DbService(
-    IDataReader<FileHashItem> dataTransformer,
+    IDataReader<FileHash> dataTransformer,
     ErrorService errorService,
-    HashValuesContext dataContext,
-    HashValuesContext errorContext)
+    PostgresConnection dbConnection)
 {
+    private const int BatchSize = 1000;
+   
     private int _filesCounter;
     
-    private readonly HashValuesContext _dataContext =
-        dataContext ?? throw new ArgumentNullException(nameof(dataContext));
-
-    private readonly IDataReader<FileHashItem> _dataTransformer =
+    private readonly List<NpgsqlParameter> _parameters = new(BatchSize * 2);
+    
+    private readonly IDataReader<FileHash> _dataTransformer =
         dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
 
-    private readonly HashValuesContext _errorContext =
-        errorContext ?? throw new ArgumentNullException(nameof(errorContext));
-
     private readonly ErrorService _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
+    private readonly PostgresConnection _dbConnection = dbConnection ?? throw new ArgumentNullException(nameof(dbConnection));
 
     public async Task WriteDataAndErrors()
     {
+        await Task.Yield();
+        
+        await _dbConnection.OpenConnection();
+        
         await Task.WhenAll(WriteDataToDb(), WriteErrorToDb());
 
         Console.WriteLine($"{_filesCounter} files were processed"); 
@@ -36,7 +40,7 @@ public sealed class DbService(
 
     private async Task WriteDataToDb()
     {
-         await _dataTransformer.Reader.ProcessData(WriteData);
+        await _dataTransformer.Reader.ProcessData(WriteData);
         
         _errorService.Writer.TryComplete();
     }
@@ -45,33 +49,50 @@ public sealed class DbService(
     {
         try
         {
-            // TODO change batchSize by settings
-            const int batchSize = 1000;
-            var batchCount = 0;
-            
-            await foreach (var item in _dataTransformer.Reader.ReadAllAsync())
+            var batchedFileHashes = new List<FileHash>(BatchSize);
+            await foreach (var fileHash in _dataTransformer.Reader.ReadAllAsync())
             {
-                _dataContext.FileHashes.Add(new FileHashEntity(item.Path.ToString(), BitConverter.ToString(item.Hash)));
-                ++_filesCounter;
+                batchedFileHashes.Add(fileHash);
                 
-                ++batchCount;
-                if (batchCount < batchSize) continue;
-                await _dataContext.SaveChangesAsync();
-                batchCount = 0;
+                if (batchedFileHashes.Count < BatchSize) continue;
+
+                await ExecuteBatchInsert(batchedFileHashes);
+                _filesCounter += batchedFileHashes.Count;
+                batchedFileHashes.Clear();
             }
-            
-            if (batchCount > 0)
+
+            if (batchedFileHashes.Count > 0)
             {
-                await _dataContext.SaveChangesAsync();
-            }
+                await ExecuteBatchInsert(batchedFileHashes);
+                _filesCounter += batchedFileHashes.Count;
+                batchedFileHashes.Clear();
+            }    
         }
         catch (Exception ex)
         {
-            _errorService.Writer.TryWrite(new ErrorItem
-            {
-                Description = ex.ToString()
-            });
+            _errorService.Writer.TryWrite(new Error(ex.ToString()));
         }
+    }
+    
+    private async Task ExecuteBatchInsert(List<FileHash> fileHashes)
+    {
+        var sql = new StringBuilder("INSERT INTO hashes.hashes (path, hash) VALUES ");
+
+        for (var i = 0; i < fileHashes.Count; ++i)
+        {
+            if (i > 0)
+            {
+                sql.Append(", ");
+            }
+
+            sql.Append($"(@path{i}, @hash{i})");
+            _parameters.Add(new NpgsqlParameter($"@path{i}", fileHashes[i].Path));
+            _parameters.Add(new NpgsqlParameter($"@hash{i}", fileHashes[i].Hash));
+        }
+
+        await _dbConnection.ExecuteCommand(sql.ToString(), _parameters);
+        
+        _parameters.Clear();
     }
 
     private async Task WriteErrorToDb()
@@ -83,8 +104,7 @@ public sealed class DbService(
     {
         await foreach (var error in _errorService.Reader.ReadAllAsync())
         {
-            await _errorContext.Errors.AddAsync(new ErrorEntity(error.Description));
-            await _errorContext.SaveChangesAsync();
+           await _dbConnection.ExecuteCommand("INSERT INTO hashes.errors (description) VALUES (@description)", [new NpgsqlParameter("@description", error.Description)]);
         }
     }
 }

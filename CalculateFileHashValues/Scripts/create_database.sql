@@ -1,9 +1,20 @@
-CREATE DATABASE hash_values;
+CREATE DATABASE hashes;
 
-CREATE USER hash_values_user WITH PASSWORD '123';
+CREATE USER hashes_user WITH PASSWORD '123';
 
-GRANT ALL PRIVILEGES ON DATABASE hash_values TO hash_values_user;
+GRANT ALL PRIVILEGES ON DATABASE hashes TO hashes_user;
 
-\c hash_values
+\c hashes
 
-CREATE SCHEMA IF NOT EXISTS hash_values AUTHORIZATION hash_values_user;
+CREATE SCHEMA IF NOT EXISTS hashes AUTHORIZATION hashes_user;
+
+CREATE TABLE hashes.hashes (
+    id SERIAL PRIMARY KEY,
+    path VARCHAR,
+    hash VARCHAR(256)
+);
+
+CREATE TABLE hashes.errors (
+    id SERIAL PRIMARY KEY,
+    path VARCHAR
+);

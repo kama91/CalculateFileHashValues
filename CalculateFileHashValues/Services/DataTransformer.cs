@@ -1,46 +1,49 @@
 ﻿using System;
+using System.IO;
+using System.IO.Hashing;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using CalculateFileHashValues.DataAccess.Models;
 using CalculateFileHashValues.Extensions;
-using CalculateFileHashValues.Models;
 using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public sealed class DataTransformer<TI, TO>(
-    Func<TI, TO> transformAlgorithm,
-    IDataWriter<ErrorItem> errorService
-) : IDataWriter<TI>, IDataReader<TO>
+public sealed class DataTransformer(
+    IDataWriter<FileStream> streamCleaner,
+    IDataWriter<Error> errorService) : IDataWriter<string>, IDataReader<FileHash>
 {
-    private readonly IDataWriter<ErrorItem> _errorService =
+    private readonly IDataWriter<FileStream> _streamCleaner = 
+        streamCleaner ?? throw new ArgumentNullException(nameof(streamCleaner));
+
+    private readonly IDataWriter<Error> _errorService =
         errorService ?? throw new ArgumentNullException(nameof(errorService));
 
-    private readonly Channel<TI> _inputDataChannel = Channel.CreateUnbounded<TI>(new UnboundedChannelOptions
+    private readonly Channel<string> _inputDataChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
     {
         AllowSynchronousContinuations = true,
-        SingleReader = true,
-        SingleWriter = true,
+        SingleReader = true
     });
     
-    private readonly Channel<TO> _transformedDataChannel = Channel.CreateUnbounded<TO>(new UnboundedChannelOptions
+    private readonly Channel<FileHash> _transformedDataChannel = Channel.CreateUnbounded<FileHash>(new UnboundedChannelOptions
     {
         AllowSynchronousContinuations = true,
         SingleReader = true,
-        SingleWriter = true,
+        SingleWriter = true
     });
 
-    private readonly Func<TI, TO> _transformAlgorithm =
-        transformAlgorithm ?? throw new ArgumentNullException(nameof(transformAlgorithm));
+    public ChannelWriter<string> Writer => _inputDataChannel.Writer;
 
-    public ChannelReader<TO> Reader => _transformedDataChannel.Reader;
-
-    public ChannelWriter<TI> Writer => _inputDataChannel.Writer;
+    public ChannelReader<FileHash> Reader => _transformedDataChannel.Reader;
 
     public async Task Transform()
     {
+        await Task.Yield();
+        
         await _inputDataChannel.Reader.ProcessData(ReadAndWrite);
 
         _transformedDataChannel.Writer.TryComplete();
+        _streamCleaner.Writer.TryComplete();
     }
 
     private async Task ReadAndWrite()
@@ -49,16 +52,18 @@ public sealed class DataTransformer<TI, TO>(
         {
             try
             {
-               await _transformedDataChannel.Writer.WriteAsync(_transformAlgorithm.Invoke(path));
+                var stream = File.OpenRead(path);
+                var hash = new XxHash128();
+                await hash.AppendAsync(stream);
+                var bytes = hash.GetHashAndReset();
+                
+                await _transformedDataChannel.Writer.WriteAsync(new FileHash(path, BitConverter.ToString(bytes)));
+                
+                await _streamCleaner.Writer.WriteAsync(stream);
             }
             catch (Exception ex)
             {
-                var fullError = ex.ToString();
-                await _errorService.Writer.WriteAsync(new ErrorItem
-                {
-                    Description = fullError
-                });
-                await Console.Error.WriteLineAsync($"Error: {fullError}");
+                await _errorService.Writer.WriteAsync(new Error(ex.ToString()));
             }
         }
     }

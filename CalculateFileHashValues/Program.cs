@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using CalculateFileHashValues.DataAccess;
-using CalculateFileHashValues.Models;
 using CalculateFileHashValues.Services;
 using Microsoft.Extensions.Configuration;
 
@@ -24,31 +22,26 @@ internal static class HashSum
             var timer = Stopwatch.StartNew();
             Console.WriteLine("Please, standby........");
 
-            FileHashItem CreateFileHashItem(string filePath)
-            {
-                return new FileHashItem
-                {
-                    Path = new ReadOnlyMemory<char>(filePath.ToCharArray()) ,
-                    Hash = HashAlgorithms.HashAlgorithms.ComputeSha256Sync(filePath)
-                };
-            }
-            
             var errorService = new ErrorService();
-            var dataTransformer = new DataTransformer<string, FileHashItem>(CreateFileHashItem, errorService);
-            var fileScannerService = new FileScanner(dataTransformer, errorService);
+            var streamCleaner = new StreamCleaner();
+            
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json").Build();
 
             var dbConnectionString = config.GetConnectionString("Postgres");
-            await using var dataCtx = new HashValuesContext(dbConnectionString);
-            await using var errorCtx = new HashValuesContext(dbConnectionString);
-            var dbService = new DbService(dataTransformer, errorService, dataCtx, errorCtx);
 
+            var dataTransformer = new DataTransformer(streamCleaner,errorService);
+            var fileScannerService = new FileScanner(dataTransformer, errorService);
+            
+            using var dbConnection = new PostgresConnection(dbConnectionString);
+            var dbService = new DbService(dataTransformer, errorService, dbConnection);
+            
             await Task.WhenAll(
-                Task.Run(() => fileScannerService.ScanDirectories(directories?.Replace(@"\", @"\\"))),
-                Task.Run(dataTransformer.Transform),
-                Task.Run(dbService.WriteDataAndErrors));
+                fileScannerService.ScanDirectories(directories?.Replace(@"\", @"\\")),
+                dataTransformer.Transform(),
+                dbService.WriteDataAndErrors(),
+                streamCleaner.Clean());
             
             Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
             Console.WriteLine("Close window? 0 - close, 1 - enter new paths");

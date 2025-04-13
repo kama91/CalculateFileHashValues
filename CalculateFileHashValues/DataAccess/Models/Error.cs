@@ -1,6 +1,3 @@
 namespace CalculateFileHashValues.DataAccess.Models;
 
-public interface IEntity
-{
-    int Id { get; set; }
-}
+public sealed record Error(string Description);
