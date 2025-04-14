@@ -52,12 +52,12 @@ public sealed class DataTransformer(
         {
             try
             {
-                var stream = File.OpenRead(path);
+                var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
                 var hash = new XxHash128();
                 await hash.AppendAsync(stream);
                 var bytes = hash.GetHashAndReset();
                 
-                await _transformedDataChannel.Writer.WriteAsync(new FileHash(path, BitConverter.ToString(bytes)));
+                await _transformedDataChannel.Writer.WriteAsync(new FileHash(path, Convert.ToHexString(bytes)));
                 
                 await _streamCleaner.Writer.WriteAsync(stream);
             }

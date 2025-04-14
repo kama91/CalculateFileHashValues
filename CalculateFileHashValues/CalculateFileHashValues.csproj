@@ -21,11 +21,4 @@
         </None>
     </ItemGroup>
 
-    <ItemGroup>
-      <Compile Remove="DataAccess\Models\ErrorEntity.cs" />
-      <Compile Remove="DataAccess\Models\FileHashEntity.cs" />
-      <Compile Remove="DataAccess\Models\IEntity.cs" />
-      <Compile Remove="DataAccess\HashValuesContext.cs" />
-    </ItemGroup>
-
 </Project>
