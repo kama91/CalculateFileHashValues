@@ -55,7 +55,7 @@ public sealed class DataTransformer(
                 var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
                 var hash = new XxHash128();
                 await hash.AppendAsync(stream);
-                var bytes = hash.GetHashAndReset();
+                var bytes = hash.GetCurrentHash();
                 
                 await _transformedDataChannel.Writer.WriteAsync(new FileHash(path, Convert.ToHexString(bytes)));
                 
