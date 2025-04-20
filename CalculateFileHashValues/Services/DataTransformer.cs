@@ -22,14 +22,11 @@ public sealed class DataTransformer(
     private readonly Channel<string> _inputDataChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
     {
         AllowSynchronousContinuations = true,
-        SingleReader = true
     });
     
     private readonly Channel<FileHash> _transformedDataChannel = Channel.CreateUnbounded<FileHash>(new UnboundedChannelOptions
     {
         AllowSynchronousContinuations = true,
-        SingleReader = true,
-        SingleWriter = true
     });
 
     public ChannelWriter<string> Writer => _inputDataChannel.Writer;
@@ -40,15 +37,23 @@ public sealed class DataTransformer(
     {
         await Task.Yield();
         
-        await _inputDataChannel.Reader.ProcessData(ReadAndWrite);
+        var processorCount = Environment.ProcessorCount;
+        var tasks = new Task[processorCount];
 
+        for (var i = 0; i < processorCount; ++i)
+        {
+            tasks[i] = _inputDataChannel.Reader.ProcessData(TransformData);
+        }
+
+        await Task.WhenAll(tasks);
+        
         _transformedDataChannel.Writer.TryComplete();
         _streamCleaner.Writer.TryComplete();
     }
-
-    private async Task ReadAndWrite()
+    
+    private async Task TransformData()
     {
-        await foreach (var path in _inputDataChannel.Reader.ReadAllAsync())
+        while (_inputDataChannel.Reader.TryRead(out var path))
         {
             try
             {

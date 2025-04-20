@@ -10,8 +10,7 @@ public class StreamCleaner : IDataWriter<FileStream>
     private readonly Channel<FileStream> _streams = Channel.CreateUnbounded<FileStream>(new UnboundedChannelOptions
     {
         AllowSynchronousContinuations = true,
-        SingleReader = true,
-        SingleWriter = true
+        SingleReader = true
     });
 
     public ChannelWriter<FileStream> Writer => _streams.Writer;

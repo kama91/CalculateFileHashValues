@@ -6,7 +6,11 @@ namespace CalculateFileHashValues.Services;
 
 public sealed class ErrorService : IDataWriter<Error>, IDataReader<Error>
 {
-    private readonly Channel<Error> _errorsChannel = Channel.CreateUnbounded<Error>();
+    private readonly Channel<Error> _errorsChannel = Channel.CreateBounded<Error>(new BoundedChannelOptions(1000)
+    {
+        AllowSynchronousContinuations = true,
+        SingleReader = true
+    });
 
     public ChannelReader<Error> Reader => _errorsChannel.Reader;
 
