@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Data;
 using System.Threading.Tasks;
 using CalculateFileHashValues.DataAccess.Models;
 using CalculateFileHashValues.Extensions;
@@ -13,25 +13,25 @@ namespace CalculateFileHashValues.DataAccess;
 public sealed class DbService(
     IDataReader<FileHash> dataTransformer,
     ErrorService errorService,
-    PostgresConnection dbConnection)
+    NpgsqlConnection dbConnectionHashes,
+    NpgsqlConnection dbConnectionErrors)
 {
-    private const int BatchSize = 1000;
+    private const int BatchSize = 5000;
    
     private int _filesCounter;
-    
-    private readonly List<NpgsqlParameter> _parameters = new(BatchSize * 2);
     
     private readonly IDataReader<FileHash> _dataTransformer =
         dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
 
     private readonly ErrorService _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
-    private readonly PostgresConnection _dbConnection = dbConnection ?? throw new ArgumentNullException(nameof(dbConnection));
+    private readonly NpgsqlConnection _dbConnectionHashes = dbConnectionHashes ?? throw new ArgumentNullException(nameof(dbConnectionHashes));
+    private readonly NpgsqlConnection _dbConnectionErrors = dbConnectionErrors ?? throw new ArgumentNullException(nameof(dbConnectionErrors));
 
     public async Task WriteDataAndErrors()
     {
         await Task.Yield();
-        
-        await _dbConnection.OpenConnection();
+
+        await Task.WhenAll(_dbConnectionHashes.OpenAsync(), _dbConnectionErrors.OpenAsync());
         
         await Task.WhenAll(WriteDataToDb(), WriteErrorToDb());
 
@@ -55,18 +55,18 @@ public sealed class DbService(
                 batchedFileHashes.Add(fileHash);
                 
                 if (batchedFileHashes.Count < BatchSize) continue;
-
+            
                 await ExecuteBatchInsert(batchedFileHashes);
                 _filesCounter += batchedFileHashes.Count;
                 batchedFileHashes.Clear();
             }
-
+            
             if (batchedFileHashes.Count > 0)
             {
                 await ExecuteBatchInsert(batchedFileHashes);
                 _filesCounter += batchedFileHashes.Count;
                 batchedFileHashes.Clear();
-            }    
+            }
         }
         catch (Exception ex)
         {
@@ -76,23 +76,16 @@ public sealed class DbService(
     
     private async Task ExecuteBatchInsert(List<FileHash> fileHashes)
     {
-        var sql = new StringBuilder("INSERT INTO hashes.hashes (path, hash) VALUES ");
-
-        for (var i = 0; i < fileHashes.Count; ++i)
+        await using var batch = _dbConnectionHashes.CreateBatch();
+        foreach (var fileHash in fileHashes)
         {
-            if (i > 0)
-            {
-                sql.Append(", ");
-            }
-
-            sql.Append($"(@path{i}, @hash{i})");
-            _parameters.Add(new NpgsqlParameter($"@path{i}", fileHashes[i].Path));
-            _parameters.Add(new NpgsqlParameter($"@hash{i}", fileHashes[i].Hash));
+            var command = new NpgsqlBatchCommand("INSERT INTO hashes.hashes (path, hash) VALUES (@path, @hash)");
+            command.Parameters.AddWithValue("path", fileHash.Path);
+            command.Parameters.AddWithValue("hash", fileHash.Hash);
+            batch.BatchCommands.Add(command);
         }
 
-        await _dbConnection.ExecuteCommand(sql.ToString(), _parameters);
-        
-        _parameters.Clear();
+        await batch.ExecuteNonQueryAsync();
     }
 
     private async Task WriteErrorToDb()
@@ -103,8 +96,12 @@ public sealed class DbService(
     private async Task WriteError()
     {
         await foreach (var error in _errorService.Reader.ReadAllAsync())
-        {
-           await _dbConnection.ExecuteCommand("INSERT INTO hashes.errors (description) VALUES (@description)", [new NpgsqlParameter("@description", error.Description)]);
+        { 
+            await using var command = _dbConnectionErrors.CreateCommand();
+            command.CommandText = "INSERT INTO hashes.errors (description) VALUES (@description)";
+            command.Parameters.AddWithValue("description", error.Description);
+            command.CommandType = CommandType.Text;
+            await command.ExecuteNonQueryAsync();
         }
     }
 }

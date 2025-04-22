@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CalculateFileHashValues.DataAccess;
 using CalculateFileHashValues.Services;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 
 namespace CalculateFileHashValues;
 
@@ -33,9 +34,10 @@ internal static class HashSum
 
             var dataTransformer = new DataTransformer(streamCleaner,errorService);
             var fileScannerService = new FileScanner(dataTransformer, errorService);
-            
-            using var dbConnection = new PostgresConnection(dbConnectionString);
-            var dbService = new DbService(dataTransformer, errorService, dbConnection);
+
+            await using var dbConnectionHashes = new NpgsqlConnection(dbConnectionString);
+            await using var dbConnectionErrors = new NpgsqlConnection(dbConnectionString);
+            var dbService = new DbService(dataTransformer, errorService, dbConnectionHashes, dbConnectionErrors);
             
             await Task.WhenAll(
                 fileScannerService.ScanDirectories(directories?.Replace(@"\", @"\\")),

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.IO.Hashing;
+using System.Linq;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using CalculateFileHashValues.DataAccess.Models;
@@ -21,12 +23,12 @@ public sealed class DataTransformer(
 
     private readonly Channel<string> _inputDataChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
     {
-        AllowSynchronousContinuations = true,
+        AllowSynchronousContinuations = true
     });
     
     private readonly Channel<FileHash> _transformedDataChannel = Channel.CreateUnbounded<FileHash>(new UnboundedChannelOptions
     {
-        AllowSynchronousContinuations = true,
+        AllowSynchronousContinuations = true
     });
 
     public ChannelWriter<string> Writer => _inputDataChannel.Writer;
@@ -37,16 +39,17 @@ public sealed class DataTransformer(
     {
         await Task.Yield();
         
-        var processorCount = Environment.ProcessorCount;
-        var tasks = new Task[processorCount];
-
-        for (var i = 0; i < processorCount; ++i)
+        var parallelOptions = new ParallelOptions
         {
-            tasks[i] = _inputDataChannel.Reader.ProcessData(TransformData);
-        }
+            CancellationToken = CancellationToken.None,
+            MaxDegreeOfParallelism = Environment.ProcessorCount
+        };
+        await Parallel.ForEachAsync(Enumerable.Range(0, parallelOptions.MaxDegreeOfParallelism), parallelOptions,
+            async (_, _) =>
+        {
+            await _inputDataChannel.Reader.ProcessData(TransformData);
+        });
 
-        await Task.WhenAll(tasks);
-        
         _transformedDataChannel.Writer.TryComplete();
         _streamCleaner.Writer.TryComplete();
     }
