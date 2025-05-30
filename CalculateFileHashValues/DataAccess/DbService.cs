@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
-using CalculateFileHashValues.DataAccess.Models;
+
 using CalculateFileHashValues.Extensions;
+using CalculateFileHashValues.Models;
 using CalculateFileHashValues.Services;
 using CalculateFileHashValues.Services.Interfaces;
+
 using Npgsql;
 
 namespace CalculateFileHashValues.DataAccess;
@@ -70,11 +72,11 @@ public sealed class DbService(
         }
         catch (Exception ex)
         {
-            _errorService.Writer.TryWrite(new Error(ex.ToString()));
+            _errorService.Writer.TryWrite(ex.ToString());
         }
     }
     
-    private async Task ExecuteBatchInsert(List<FileHash> fileHashes)
+    private async Task ExecuteBatchInsert(IReadOnlyCollection<FileHash> fileHashes)
     {
         await using var batch = _dbConnectionHashes.CreateBatch();
         foreach (var fileHash in fileHashes)
@@ -99,7 +101,7 @@ public sealed class DbService(
         { 
             await using var command = _dbConnectionErrors.CreateCommand();
             command.CommandText = "INSERT INTO hashes.errors (description) VALUES (@description)";
-            command.Parameters.AddWithValue("description", error.Description);
+            command.Parameters.AddWithValue("description", error);
             command.CommandType = CommandType.Text;
             await command.ExecuteNonQueryAsync();
         }

@@ -1,18 +1,17 @@
 ﻿using System.Threading.Channels;
-using CalculateFileHashValues.DataAccess.Models;
 using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public sealed class ErrorService : IDataWriter<Error>, IDataReader<Error>
+public sealed class ErrorService : IDataWriter<string>, IDataReader<string>
 {
-    private readonly Channel<Error> _errorsChannel = Channel.CreateUnbounded<Error>(new UnboundedChannelOptions
+    private readonly Channel<string> _errorsChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
     {
         AllowSynchronousContinuations = true,
         SingleReader = true
     });
 
-    public ChannelReader<Error> Reader => _errorsChannel.Reader;
+    public ChannelReader<string> Reader => _errorsChannel.Reader;
 
-    public ChannelWriter<Error> Writer => _errorsChannel.Writer;
+    public ChannelWriter<string> Writer => _errorsChannel.Writer;
 }

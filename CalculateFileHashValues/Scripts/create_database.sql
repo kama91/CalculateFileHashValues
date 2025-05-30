@@ -10,7 +10,7 @@ CREATE SCHEMA IF NOT EXISTS hashes AUTHORIZATION hashes_user;
 
 CREATE TABLE hashes.hashes (
     id SERIAL PRIMARY KEY,
-    path VARCHAR(260),
+    path VARCHAR(512),
     hash VARCHAR(256),
     CONSTRAINT unique_path_hash UNIQUE (path, hash)
 );

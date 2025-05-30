@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using CalculateFileHashValues.DataAccess.Models;
 using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
@@ -38,7 +37,7 @@ public sealed class FileScanner(
         _dataTransformer.Writer.TryComplete();
     }
 
-    private async Task WriteError(string error) => await _errorService.Writer.WriteAsync(new Error(error));
+    private async Task WriteError(string error) => await _errorService.Writer.WriteAsync(error);
     
     private async Task ParallelScan(string root)
     {

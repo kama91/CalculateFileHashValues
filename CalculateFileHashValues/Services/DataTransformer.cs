@@ -5,20 +5,21 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using CalculateFileHashValues.DataAccess.Models;
+
 using CalculateFileHashValues.Extensions;
+using CalculateFileHashValues.Models;
 using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
 public sealed class DataTransformer(
     IDataWriter<FileStream> streamCleaner,
-    IDataWriter<Error> errorService) : IDataWriter<string>, IDataReader<FileHash>
+    IDataWriter<string> errorService) : IDataWriter<string>, IDataReader<FileHash>
 {
     private readonly IDataWriter<FileStream> _streamCleaner = 
         streamCleaner ?? throw new ArgumentNullException(nameof(streamCleaner));
 
-    private readonly IDataWriter<Error> _errorService =
+    private readonly IDataWriter<string> _errorService =
         errorService ?? throw new ArgumentNullException(nameof(errorService));
 
     private readonly Channel<string> _inputDataChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
@@ -71,7 +72,7 @@ public sealed class DataTransformer(
             }
             catch (Exception ex)
             {
-                await _errorService.Writer.WriteAsync(new Error(ex.ToString()));
+                await _errorService.Writer.WriteAsync(ex.ToString());
             }
         }
     }
