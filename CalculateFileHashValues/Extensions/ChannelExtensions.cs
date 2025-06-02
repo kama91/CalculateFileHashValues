@@ -12,7 +12,5 @@ public static class ChannelExtensions
         {
             await function.Invoke();
         }
-        
-        await function.Invoke();
     }
 }
