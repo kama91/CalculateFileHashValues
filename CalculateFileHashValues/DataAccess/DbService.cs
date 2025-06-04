@@ -29,25 +29,25 @@ public sealed class DbService(
     private readonly NpgsqlConnection _dbConnectionHashes = dbConnectionHashes ?? throw new ArgumentNullException(nameof(dbConnectionHashes));
     private readonly NpgsqlConnection _dbConnectionErrors = dbConnectionErrors ?? throw new ArgumentNullException(nameof(dbConnectionErrors));
 
-    public async Task WriteDataAndErrors()
+    public async Task Write()
     {
         await Task.Yield();
 
         await Task.WhenAll(_dbConnectionHashes.OpenAsync(), _dbConnectionErrors.OpenAsync());
         
-        await Task.WhenAll(WriteDataToDb(), WriteErrorToDb());
+        await Task.WhenAll(WriteHashesToDb(), WriteErrorToDb());
 
         Console.WriteLine($"{_filesCounter} files were processed"); 
     }
 
-    private async Task WriteDataToDb()
+    private async Task WriteHashesToDb()
     {
-        await _dataTransformer.Reader.ProcessData(WriteData);
+        await _dataTransformer.Reader.ProcessData(WriteHashes);
         
         _errorService.Writer.TryComplete();
     }
 
-    private async Task WriteData()
+    private async Task WriteHashes()
     {
         try
         {

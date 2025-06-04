@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.IO.Hashing;
-using System.Linq;
-using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -12,11 +10,14 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public sealed class DataTransformer(
+public sealed class HashCalculator(
     IDataWriter<FileStream> streamCleaner,
     IDataWriter<string> errorService) : IDataWriter<string>, IDataReader<FileHash>
 {
-    private readonly IDataWriter<FileStream> _streamCleaner = 
+    private const int BufferSize = 1024 * 1024;
+    private readonly int _maxDegreeOfParallelism = Environment.ProcessorCount;
+
+    private readonly IDataWriter<FileStream> _streamCleaner =
         streamCleaner ?? throw new ArgumentNullException(nameof(streamCleaner));
 
     private readonly IDataWriter<string> _errorService =
@@ -26,7 +27,7 @@ public sealed class DataTransformer(
     {
         AllowSynchronousContinuations = true
     });
-    
+
     private readonly Channel<FileHash> _transformedDataChannel = Channel.CreateUnbounded<FileHash>(new UnboundedChannelOptions
     {
         AllowSynchronousContinuations = true
@@ -36,44 +37,45 @@ public sealed class DataTransformer(
 
     public ChannelReader<FileHash> Reader => _transformedDataChannel.Reader;
 
-    public async Task Transform()
+    public async Task Calculate()
     {
         await Task.Yield();
-        
-        var parallelOptions = new ParallelOptions
-        {
-            CancellationToken = CancellationToken.None,
-            MaxDegreeOfParallelism = Environment.ProcessorCount
-        };
-        await Parallel.ForEachAsync(Enumerable.Range(0, parallelOptions.MaxDegreeOfParallelism), parallelOptions,
-            async (_, _) =>
-        {
-            await _inputDataChannel.Reader.ProcessData(TransformData);
-        });
+
+        await _inputDataChannel.Reader.ProcessData(ReadFilesAndComputeHash);
 
         _transformedDataChannel.Writer.TryComplete();
         _streamCleaner.Writer.TryComplete();
     }
-    
-    private async Task TransformData()
+
+    private async Task ReadFilesAndComputeHash()
     {
-        while (_inputDataChannel.Reader.TryRead(out var path))
+        await Parallel.ForEachAsync(_inputDataChannel.Reader.ReadAllAsync(), new ParallelOptions
+        {
+            MaxDegreeOfParallelism = _maxDegreeOfParallelism,
+
+        }, async (path, ct) =>
         {
             try
             {
-                var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
+                var stream = new FileStream(
+                    path,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: BufferSize,
+                    options: FileOptions.SequentialScan);
+
                 var hash = new XxHash128();
-                await hash.AppendAsync(stream);
+                hash.Append(stream);
                 var bytes = hash.GetCurrentHash();
-                
-                await _transformedDataChannel.Writer.WriteAsync(new FileHash(path, Convert.ToHexString(bytes)));
-                
-                await _streamCleaner.Writer.WriteAsync(stream);
+
+                await _transformedDataChannel.Writer.WriteAsync(new FileHash(path, Convert.ToHexString(bytes)), ct);
+                await _streamCleaner.Writer.WriteAsync(stream, ct);
             }
             catch (Exception ex)
             {
-                await _errorService.Writer.WriteAsync(ex.ToString());
+                await _errorService.Writer.WriteAsync(ex.ToString(), ct);
             }
-        }
+        });
     }
 }

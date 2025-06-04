@@ -32,17 +32,17 @@ internal static class HashSum
 
             var dbConnectionString = config.GetConnectionString("Postgres");
 
-            var dataTransformer = new DataTransformer(streamCleaner,errorService);
-            var fileScannerService = new FileScanner(dataTransformer, errorService);
+            var hashCalculator = new HashCalculator(streamCleaner,errorService);
+            var fileScannerService = new FileScanner(hashCalculator, errorService);
 
             await using var dbConnectionHashes = new NpgsqlConnection(dbConnectionString);
             await using var dbConnectionErrors = new NpgsqlConnection(dbConnectionString);
-            var dbService = new DbService(dataTransformer, errorService, dbConnectionHashes, dbConnectionErrors);
+            var dbService = new DbService(hashCalculator, errorService, dbConnectionHashes, dbConnectionErrors);
             
             await Task.WhenAll(
                 fileScannerService.ScanDirectories(directories?.Replace(@"\", @"\\")),
-                dataTransformer.Transform(),
-                dbService.WriteDataAndErrors(),
+                hashCalculator.Calculate(),
+                dbService.Write(),
                 streamCleaner.Clean());
             
             Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
