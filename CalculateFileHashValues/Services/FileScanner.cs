@@ -9,18 +9,21 @@ namespace CalculateFileHashValues.Services;
 
 public sealed class FileScanner(
     IDataWriter<string> dataTransformer,
-    ErrorService errorService)
+    ErrorService errorService,
+    int maxDegreeOfParallelism)
 {
     private readonly IDataWriter<string> _dataTransformer =
         dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
 
     private readonly ErrorService _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
 
+    private readonly int _maxDegreeOfParallelism = maxDegreeOfParallelism;
+
     public async Task ScanDirectories(string directoryPaths)
     {
-        await Task.Yield();
-        
         ArgumentNullException.ThrowIfNull(directoryPaths);
+        
+        await Task.Yield();
 
         foreach (var path in directoryPaths.Split(','))
         {
@@ -41,8 +44,6 @@ public sealed class FileScanner(
     
     private async Task ParallelScan(string root)
     {
-        var processorCount = Environment.ProcessorCount;
-
         var dirs = new Queue<string>();
 
         dirs.Enqueue(root);
@@ -72,7 +73,7 @@ public sealed class FileScanner(
                 await WriteError(ex.ToString());
             }
 
-            if (files.Length < processorCount)
+            if (files.Length < _maxDegreeOfParallelism)
             {
                 foreach (var file in files)
                 {
@@ -84,7 +85,7 @@ public sealed class FileScanner(
                 var parallelOptions = new ParallelOptions
                 {
                     CancellationToken = CancellationToken.None,
-                    MaxDegreeOfParallelism = processorCount,
+                    MaxDegreeOfParallelism = _maxDegreeOfParallelism,
                 };
                 await Parallel.ForEachAsync(files, parallelOptions,async (file, ct) =>
                 { 

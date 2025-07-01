@@ -12,17 +12,19 @@ namespace CalculateFileHashValues.Services;
 
 public sealed class HashCalculator(
     IDataWriter<FileStream> streamCleaner,
-    IDataWriter<string> errorService) : IDataWriter<string>, IDataReader<FileHash>
+    IDataWriter<string> errorService,
+    int maxDegreeOfParallelism) : IDataWriter<string>, IDataReader<FileHash>
 {
     private const int BufferSize = 1024 * 1024;
-    private readonly int _maxDegreeOfParallelism = Environment.ProcessorCount;
 
     private readonly IDataWriter<FileStream> _streamCleaner =
         streamCleaner ?? throw new ArgumentNullException(nameof(streamCleaner));
 
     private readonly IDataWriter<string> _errorService =
         errorService ?? throw new ArgumentNullException(nameof(errorService));
-
+    
+    private readonly int _maxDegreeOfParallelism = maxDegreeOfParallelism;
+    
     private readonly Channel<string> _inputDataChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
     {
         AllowSynchronousContinuations = true

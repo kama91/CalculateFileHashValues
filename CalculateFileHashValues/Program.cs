@@ -32,13 +32,17 @@ internal static class HashSum
 
             var dbConnectionString = config.GetConnectionString("Postgres");
 
-            var hashCalculator = new HashCalculator(streamCleaner,errorService);
-            var fileScannerService = new FileScanner(hashCalculator, errorService);
+            var maxDegreeOfParallelismForScanFile = Environment.ProcessorCount > 3 ? 2 : 1;
+            var maxDegreeOfParallelismCalculateHash = Environment.ProcessorCount - maxDegreeOfParallelismForScanFile > 1
+                ? Environment.ProcessorCount - maxDegreeOfParallelismForScanFile : 1;
+
+            var hashCalculator = new HashCalculator(streamCleaner,errorService, maxDegreeOfParallelismCalculateHash);
+            var fileScannerService = new FileScanner(hashCalculator, errorService, maxDegreeOfParallelismForScanFile);
 
             await using var dbConnectionHashes = new NpgsqlConnection(dbConnectionString);
             await using var dbConnectionErrors = new NpgsqlConnection(dbConnectionString);
             var dbService = new DbService(hashCalculator, errorService, dbConnectionHashes, dbConnectionErrors);
-            
+
             await Task.WhenAll(
                 fileScannerService.ScanDirectories(directories?.Replace(@"\", @"\\")),
                 hashCalculator.Calculate(),
