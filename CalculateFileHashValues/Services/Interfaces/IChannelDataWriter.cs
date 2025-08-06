@@ -2,7 +2,7 @@
 
 namespace CalculateFileHashValues.Services.Interfaces;
 
-public interface IDataReader<TD>
+public interface IChannelDataWriter<TD>
 {
-    ChannelReader<TD> Reader { get; }
+    ChannelWriter<TD> Writer { get; }
 }

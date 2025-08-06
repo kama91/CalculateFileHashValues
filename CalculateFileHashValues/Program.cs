@@ -32,11 +32,11 @@ internal static class HashSum
 
             var dbConnectionString = config.GetConnectionString("Postgres");
 
-            var maxDegreeOfParallelismForScanFile = Environment.ProcessorCount > 3 ? 2 : 1;
+            const int maxDegreeOfParallelismForScanFile = 4;
             var maxDegreeOfParallelismCalculateHash = Environment.ProcessorCount - maxDegreeOfParallelismForScanFile > 1
                 ? Environment.ProcessorCount - maxDegreeOfParallelismForScanFile : 1;
 
-            var hashCalculator = new HashCalculator(streamCleaner,errorService, maxDegreeOfParallelismCalculateHash);
+            var hashCalculator = new HashCalculator(streamCleaner, errorService, maxDegreeOfParallelismCalculateHash);
             var fileScannerService = new FileScanner(hashCalculator, errorService, maxDegreeOfParallelismForScanFile);
 
             await using var dbConnectionHashes = new NpgsqlConnection(dbConnectionString);
@@ -50,11 +50,11 @@ internal static class HashSum
                 streamCleaner.Clean());
             
             Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
-            Console.WriteLine("Close window? 0 - close, 1 - enter new paths");
+            Console.WriteLine("Close window? y - close, n - enter new paths");
 
             switch (Console.ReadLine())
             {
-                case "1":
+                case "y":
                     break;
                 default:
                     _stopProcess = true;

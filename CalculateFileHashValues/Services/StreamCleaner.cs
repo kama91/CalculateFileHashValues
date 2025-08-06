@@ -5,9 +5,9 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public class StreamCleaner : IDataWriter<FileStream>
+public sealed class StreamCleaner : IChannelDataWriter<FileStream>
 {
-    private readonly Channel<FileStream> _streams = Channel.CreateUnbounded<FileStream>(new UnboundedChannelOptions
+    private readonly Channel<FileStream> _streams = Channel.CreateBounded<FileStream>(new BoundedChannelOptions(50000)
     {
         AllowSynchronousContinuations = true,
         SingleReader = true
@@ -23,7 +23,10 @@ public class StreamCleaner : IDataWriter<FileStream>
         {
             await foreach (var stream in _streams.Reader.ReadAllAsync())
             {
-                await stream.DisposeAsync();
+                if (stream is not null)
+                {
+                    await stream.DisposeAsync();
+                }
             }
         }
     }

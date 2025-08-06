@@ -8,24 +8,22 @@ using CalculateFileHashValues.Services.Interfaces;
 namespace CalculateFileHashValues.Services;
 
 public sealed class FileScanner(
-    IDataWriter<string> dataTransformer,
+    IChannelDataWriter<string> channelDataTransformer,
     ErrorService errorService,
     int maxDegreeOfParallelism)
 {
-    private readonly IDataWriter<string> _dataTransformer =
-        dataTransformer ?? throw new ArgumentNullException(nameof(dataTransformer));
+    private readonly IChannelDataWriter<string> _channelDataWriter =
+        channelDataTransformer ?? throw new ArgumentNullException(nameof(channelDataTransformer));
 
     private readonly ErrorService _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
 
-    private readonly int _maxDegreeOfParallelism = maxDegreeOfParallelism;
-
-    public async Task ScanDirectories(string directoryPaths)
+    public async Task ScanDirectories(string directories)
     {
-        ArgumentNullException.ThrowIfNull(directoryPaths);
+        ArgumentNullException.ThrowIfNull(directories);
         
         await Task.Yield();
-
-        foreach (var path in directoryPaths.Split(','))
+        
+        foreach (var path in directories.Split(','))
         {
             if (Directory.Exists(path))
             {
@@ -37,7 +35,7 @@ public sealed class FileScanner(
             }
         }
 
-        _dataTransformer.Writer.TryComplete();
+        _channelDataWriter.Writer.TryComplete();
     }
 
     private async Task WriteError(string error) => await _errorService.Writer.WriteAsync(error);
@@ -73,11 +71,11 @@ public sealed class FileScanner(
                 await WriteError(ex.ToString());
             }
 
-            if (files.Length < _maxDegreeOfParallelism)
+            if (files.Length < maxDegreeOfParallelism)
             {
                 foreach (var file in files)
                 {
-                    await _dataTransformer.Writer.WriteAsync(file);
+                    await _channelDataWriter.Writer.WriteAsync(file);
                 }
             }
             else
@@ -85,11 +83,11 @@ public sealed class FileScanner(
                 var parallelOptions = new ParallelOptions
                 {
                     CancellationToken = CancellationToken.None,
-                    MaxDegreeOfParallelism = _maxDegreeOfParallelism,
+                    MaxDegreeOfParallelism = maxDegreeOfParallelism,
                 };
                 await Parallel.ForEachAsync(files, parallelOptions,async (file, ct) =>
                 { 
-                    await _dataTransformer.Writer.WriteAsync(file, ct);
+                    await _channelDataWriter.Writer.WriteAsync(file, ct);
                 });
             }
 

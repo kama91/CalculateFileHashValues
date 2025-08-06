@@ -3,7 +3,7 @@ using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public sealed class ErrorService : IDataWriter<string>, IDataReader<string>
+public sealed class ErrorService : IChannelDataWriter<string>, IChannelDataReader<string>
 {
     private readonly Channel<string> _errorsChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
     {
