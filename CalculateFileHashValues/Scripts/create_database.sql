@@ -17,5 +17,5 @@ CREATE TABLE hashes.hashes (
 
 CREATE TABLE hashes.errors (
     id SERIAL PRIMARY KEY,
-    path VARCHAR
+    description VARCHAR
 );

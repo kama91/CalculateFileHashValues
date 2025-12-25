@@ -5,7 +5,7 @@ namespace CalculateFileHashValues.Services;
 
 public sealed class ErrorService : IChannelDataWriter<string>, IChannelDataReader<string>
 {
-    private readonly Channel<string> _errorsChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+    private readonly Channel<string> _errorsChannel = Channel.CreateBounded<string>(new BoundedChannelOptions(10000)
     {
         AllowSynchronousContinuations = true,
         SingleReader = true

@@ -1,28 +1,34 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using CalculateFileHashValues.Services.Interfaces;
 
 namespace CalculateFileHashValues.Services;
 
-public sealed class FileScanner(
-    IChannelDataWriter<string> channelDataTransformer,
-    ErrorService errorService,
-    int maxDegreeOfParallelism)
+public sealed class FileScanner(ErrorService errorService) : IChannelDataReader<string>
 {
-    private readonly IChannelDataWriter<string> _channelDataWriter =
-        channelDataTransformer ?? throw new ArgumentNullException(nameof(channelDataTransformer));
+    private const int MaxDegreeOfParallelism = 4;
 
     private readonly ErrorService _errorService = errorService ?? throw new ArgumentNullException(nameof(errorService));
 
-    public async Task ScanDirectories(string directories)
+    private readonly Channel<string> _outputDataChannel = Channel.CreateBounded<string>(
+        new BoundedChannelOptions(1000000)
+        {
+            AllowSynchronousContinuations = true,
+            SingleWriter = true
+        });
+
+    public ChannelReader<string> Reader => _outputDataChannel.Reader;
+
+    public async Task CollectFilePaths(string directories)
     {
         ArgumentNullException.ThrowIfNull(directories);
-        
+
         await Task.Yield();
-        
+
         foreach (var path in directories.Split(','))
         {
             if (Directory.Exists(path))
@@ -35,11 +41,11 @@ public sealed class FileScanner(
             }
         }
 
-        _channelDataWriter.Writer.TryComplete();
+        _outputDataChannel.Writer.TryComplete();
     }
 
     private async Task WriteError(string error) => await _errorService.Writer.WriteAsync(error);
-    
+
     private async Task ParallelScan(string root)
     {
         var dirs = new Queue<string>();
@@ -49,7 +55,7 @@ public sealed class FileScanner(
         while (dirs.Count > 0)
         {
             var currentDir = dirs.Dequeue();
-            
+
             string[] subDirs = [];
             string[] files = [];
 
@@ -71,11 +77,11 @@ public sealed class FileScanner(
                 await WriteError(ex.ToString());
             }
 
-            if (files.Length < maxDegreeOfParallelism)
+            if (files.Length < MaxDegreeOfParallelism)
             {
                 foreach (var file in files)
                 {
-                    await _channelDataWriter.Writer.WriteAsync(file);
+                    await _outputDataChannel.Writer.WriteAsync(file);
                 }
             }
             else
@@ -83,12 +89,12 @@ public sealed class FileScanner(
                 var parallelOptions = new ParallelOptions
                 {
                     CancellationToken = CancellationToken.None,
-                    MaxDegreeOfParallelism = maxDegreeOfParallelism,
+                    MaxDegreeOfParallelism = MaxDegreeOfParallelism
                 };
-                await Parallel.ForEachAsync(files, parallelOptions,async (file, ct) =>
-                { 
-                    await _channelDataWriter.Writer.WriteAsync(file, ct);
-                });
+                await Parallel.ForEachAsync(
+                    files,
+                    parallelOptions,
+                    async (file, ct) => { await _outputDataChannel.Writer.WriteAsync(file, ct); });
             }
 
             foreach (var str in subDirs)

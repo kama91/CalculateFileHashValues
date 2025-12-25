@@ -30,8 +30,6 @@ public sealed class DbService(
 
     public async Task Write()
     {
-        await Task.Yield();
-        
         await Task.WhenAll(_dbConnectionHashes.OpenAsync(), _dbConnectionErrors.OpenAsync());
         
         await Task.WhenAll(WriteHashes(), WriteErrors());

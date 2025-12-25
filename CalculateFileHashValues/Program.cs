@@ -22,9 +22,6 @@ internal static class HashSum
             var directories = Console.ReadLine();
             var timer = Stopwatch.StartNew();
             Console.WriteLine("Please, standby........");
-
-            var errorService = new ErrorService();
-            var streamCleaner = new StreamCleaner();
             
             var config = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -32,34 +29,27 @@ internal static class HashSum
 
             var dbConnectionString = config.GetConnectionString("Postgres");
 
-            const int maxDegreeOfParallelismForScanFile = 4;
-            var maxDegreeOfParallelismCalculateHash = Environment.ProcessorCount - maxDegreeOfParallelismForScanFile > 1
-                ? Environment.ProcessorCount - maxDegreeOfParallelismForScanFile : 1;
-
-            var hashCalculator = new HashCalculator(streamCleaner, errorService, maxDegreeOfParallelismCalculateHash);
-            var fileScannerService = new FileScanner(hashCalculator, errorService, maxDegreeOfParallelismForScanFile);
+            var errorService = new ErrorService();
+            var fileScannerService = new FileScanner(errorService);
+            var hashCalculator = new HashCalculator(fileScannerService, errorService);
 
             await using var dbConnectionHashes = new NpgsqlConnection(dbConnectionString);
             await using var dbConnectionErrors = new NpgsqlConnection(dbConnectionString);
             var dbService = new DbService(hashCalculator, errorService, dbConnectionHashes, dbConnectionErrors);
 
             await Task.WhenAll(
-                fileScannerService.ScanDirectories(directories?.Replace(@"\", @"\\")),
+                fileScannerService.CollectFilePaths(directories?.Replace(@"\", @"\\")),
                 hashCalculator.Calculate(),
-                dbService.Write(),
-                streamCleaner.Clean());
+                dbService.Write());
             
             Console.WriteLine($"Working time: {timer.Elapsed.TotalSeconds} seconds");
-            Console.WriteLine("Close window? y - close, n - enter new paths");
+            Console.WriteLine("Close window? y - close, any key for continue");
 
-            switch (Console.ReadLine())
+            _stopProcess = Console.ReadLine() switch
             {
-                case "y":
-                    break;
-                default:
-                    _stopProcess = true;
-                    break;
-            }
+                "y" => true,
+                _ => false
+            };
         }
     }
 }
